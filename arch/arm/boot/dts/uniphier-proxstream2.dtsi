@@ -178,6 +178,11 @@
 		clocks = <&peri 10>;
 		clock-frequency = <400000>;
 	};
+
+	aidet@5fc20000 {
+		compatible = "socionext,uniphier-aidet";
+		reg = <0x5fc20000 0x20>;
+	};
 };
 
 &refclk {

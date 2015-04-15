@@ -175,6 +175,11 @@
 		pinctrl-0 = <&pinctrl_usb3>;
 		clocks = <&mio 5>, <&mio 8>;
 	};
+
+	aidet@5fc20000 {
+		compatible = "socionext,uniphier-aidet";
+		reg = <0x5fc20000 0x20>;
+	};
 };
 
 &refclk {
