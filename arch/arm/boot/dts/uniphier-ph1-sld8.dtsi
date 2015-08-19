@@ -183,3 +183,7 @@
 &pinctrl {
 	compatible = "socionext,ph1-sld8-pinctrl", "syscon";
 };
+
+&sysctrl {
+	compatible = "socionext,ph1-sld8-sysctrl";
+};
