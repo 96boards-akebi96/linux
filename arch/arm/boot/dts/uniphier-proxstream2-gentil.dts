@@ -44,6 +44,7 @@
 
 /dts-v1/;
 /include/ "uniphier-proxstream2.dtsi"
+/include/ "uniphier-support-card.dtsi"
 
 / {
 	model = "UniPhier ProXstream2 Gentil Board";
@@ -67,6 +68,18 @@
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
 	};
+};
+
+&extbus {
+	ranges = <1 0x00000000 0x42000000 0x02000000>;
+};
+
+&support_card {
+	ranges = <0x00000000 1 0x01f00000 0x00100000>;
+};
+
+&ethsc {
+	interrupts = <0 52 4>;
 };
 
 &serial2 {
