@@ -193,6 +193,12 @@
 	clock-frequency = <20000000>;
 };
 
+&mio {
+	compatible = "socionext,ph1-pro5-mioctrl";
+	clock-names = "stdmac";
+	clocks = <&sysctrl 10>;
+};
+
 &peri {
 	compatible = "socionext,ph1-pro5-perictrl";
 	clock-names = "uart", "fi2c";
