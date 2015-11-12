@@ -183,6 +183,52 @@
 		compatible = "socionext,uniphier-aidet";
 		reg = <0x5fc20000 0x20>;
 	};
+
+	usb3_0: usb3_0@65b00000 {
+		compatible = "socionext,proxstream2-dwc3";
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb0>, <&pinctrl_usb2>;
+		reg = <0x65b00000 0x1000>;
+		interrupts = <0 134 4>;
+		clocks = <&sysctrl 20>,<&sysctrl 22>,<&sysctrl 23>;
+		clock-names = "u3clk0", "u3clk1", "u2clk0";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ss-instances = <2>;
+		hs-instances = <2>;
+		vbus-supply;
+		ranges;
+		dwc3@65a00000 {
+			compatible = "snps,dwc3";
+			reg = <0x65a00000 0x14100>;
+			interrupts = <0 134 4>;
+			tx-fifo-resize;
+		};
+	};
+
+	usb3_1: usb3_1@65d00000 {
+		compatible = "socionext,proxstream2-dwc3";
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb1>, <&pinctrl_usb3>;
+		reg = <0x65d00000 0x1000>;
+		interrupts = <0 137 4>;
+		clocks = <&sysctrl 21>,<&sysctrl 24>;
+		clock-names = "u3clk0", "u2clk0";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ss-instances = <1>;
+		hs-instances = <2>;
+		vbus-supply;
+		ranges;
+		dwc3@65c00000 {
+			compatible = "snps,dwc3";
+			reg = <0x65c00000 0x14100>;
+			interrupts = <0 137 4>;
+			tx-fifo-resize;
+		};
+	};
 };
 
 &refclk {

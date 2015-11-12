@@ -167,6 +167,52 @@
 		clocks = <&peri 10>;
 		clock-frequency = <400000>;
 	};
+
+	usb3_0: usb3_0@65b00000 {
+		compatible = "socionext,ph1-pro5-dwc3";
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb0>;
+		reg = <0x65b00000 0x1000>;
+		interrupts = <0 134 4>;
+		clocks = <&sysctrl 20>;
+		clock-names = "u3clk0";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ss-instances = <1>;
+		hs-instances = <1>;
+		vbus-supply;
+		ranges;
+		dwc3@65a00000 {
+			compatible = "snps,dwc3";
+			reg = <0x65a00000 0x14100>;
+			interrupts = <0 134 4>;
+			tx-fifo-resize;
+		};
+	};
+
+	usb3_1: usb3_1@65d00000 {
+		compatible = "socionext,ph1-pro5-dwc3";
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb1>, <&pinctrl_usb2>;
+		reg = <0x65d00000 0x1000>;
+		interrupts = <0 137 4>;
+		clocks = <&sysctrl 21>;
+		clock-names = "u3clk0";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ss-instances = <1>;
+		hs-instances = <2>;
+		vbus-supply;
+		ranges;
+		dwc3@65c00000 {
+			compatible = "snps,dwc3";
+			reg = <0x65c00000 0x14100>;
+			interrupts = <0 137 4>;
+			tx-fifo-resize;
+		};
+	};
 };
 
 &refclk {
