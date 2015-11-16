@@ -72,7 +72,7 @@
 			interrupts = <0 33 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart0>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 0>;
 		};
 
 		serial1: serial@54006900 {
@@ -82,7 +82,7 @@
 			interrupts = <0 35 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart1>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 1>;
 		};
 
 		serial2: serial@54006a00 {
@@ -92,7 +92,7 @@
 			interrupts = <0 37 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart2>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 2>;
 		};
 
 		serial3: serial@54006b00 {
@@ -102,7 +102,7 @@
 			interrupts = <0 177 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart3>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 3>;
 		};
 
 		system-bus-controller@58c00000 {
@@ -126,14 +126,14 @@
 			compatible = "arm,cortex-a9-global-timer";
 			reg = <0x60000200 0x20>;
 			interrupts = <1 11 0x104>;
-			clocks = <&arm_timer_clk>;
+			clocks = <&sysctrl 7>;
 		};
 
 		timer@60000600 {
 			compatible = "arm,cortex-a9-twd-timer";
 			reg = <0x60000600 0x20>;
 			interrupts = <1 13 0x104>;
-			clocks = <&arm_timer_clk>;
+			clocks = <&sysctrl 7>;
 		};
 
 		intc: interrupt-controller@60001000 {

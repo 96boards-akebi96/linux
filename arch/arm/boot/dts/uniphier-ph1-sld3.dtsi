@@ -73,24 +73,6 @@
 			compatible = "fixed-clock";
 			clock-frequency = <24576000>;
 		};
-
-		arm_timer_clk: arm_timer_clk {
-			#clock-cells = <0>;
-			compatible = "fixed-clock";
-			clock-frequency = <50000000>;
-		};
-
-		uart_clk: uart_clk {
-			#clock-cells = <0>;
-			compatible = "fixed-clock";
-			clock-frequency = <36864000>;
-		};
-
-		iobus_clk: iobus_clk {
-			#clock-cells = <0>;
-			compatible = "fixed-clock";
-			clock-frequency = <100000000>;
-		};
 	};
 
 	soc {
@@ -110,14 +92,14 @@
 			compatible = "arm,cortex-a9-global-timer";
 			reg = <0x20000200 0x20>;
 			interrupts = <1 11 0x304>;
-			clocks = <&arm_timer_clk>;
+			clocks = <&sysctrl 7>;
 		};
 
 		timer@20000600 {
 			compatible = "arm,cortex-a9-twd-timer";
 			reg = <0x20000600 0x20>;
 			interrupts = <1 13 0x304>;
-			clocks = <&arm_timer_clk>;
+			clocks = <&sysctrl 7>;
 		};
 
 		intc: interrupt-controller@20001000 {
@@ -145,7 +127,7 @@
 			status = "disabled";
 			reg = <0x54006800 0x40>;
 			interrupts = <0 33 4>;
-			clocks = <&uart_clk>;
+			clocks = <&sysctrl 3>;
 			fifo-size = <64>;
 		};
 
@@ -154,7 +136,7 @@
 			status = "disabled";
 			reg = <0x54006900 0x40>;
 			interrupts = <0 35 4>;
-			clocks = <&uart_clk>;
+			clocks = <&sysctrl 3>;
 			fifo-size = <64>;
 		};
 
@@ -163,7 +145,7 @@
 			status = "disabled";
 			reg = <0x54006a00 0x40>;
 			interrupts = <0 37 4>;
-			clocks = <&uart_clk>;
+			clocks = <&sysctrl 3>;
 			fifo-size = <64>;
 		};
 
@@ -174,7 +156,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 41 1>;
-			clocks = <&iobus_clk>;
+			clocks = <&sysctrl 4>;
 			clock-frequency = <100000>;
 		};
 
@@ -185,7 +167,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 42 1>;
-			clocks = <&iobus_clk>;
+			clocks = <&sysctrl 4>;
 			clock-frequency = <100000>;
 		};
 
@@ -196,7 +178,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 43 1>;
-			clocks = <&iobus_clk>;
+			clocks = <&sysctrl 4>;
 			clock-frequency = <100000>;
 		};
 
@@ -207,7 +189,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 44 1>;
-			clocks = <&iobus_clk>;
+			clocks = <&sysctrl 4>;
 			clock-frequency = <100000>;
 		};
 
@@ -218,7 +200,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 45 1>;
-			clocks = <&iobus_clk>;
+			clocks = <&sysctrl 4>;
 			clock-frequency = <400000>;
 		};
 
@@ -240,6 +222,7 @@
 			status = "disabled";
 			reg = <0x5a800100 0x100>;
 			interrupts = <0 80 4>;
+			clocks = <&mio 4>, <&mio 8>;
 		};
 
 		usb1: usb@5a810100 {
@@ -247,6 +230,7 @@
 			status = "disabled";
 			reg = <0x5a810100 0x100>;
 			interrupts = <0 81 4>;
+			clocks = <&mio 5>, <&mio 8>;
 		};
 
 		usb2: usb@5a820100 {
@@ -254,6 +238,7 @@
 			status = "disabled";
 			reg = <0x5a820100 0x100>;
 			interrupts = <0 82 4>;
+			clocks = <&mio 6>, <&mio 8>;
 		};
 
 		usb3: usb@5a830100 {
@@ -261,6 +246,7 @@
 			status = "disabled";
 			reg = <0x5a830100 0x100>;
 			interrupts = <0 83 4>;
+			clocks = <&mio 7>, <&mio 8>;
 		};
 
 		sysctrl: sysctrl@f1840000 {
