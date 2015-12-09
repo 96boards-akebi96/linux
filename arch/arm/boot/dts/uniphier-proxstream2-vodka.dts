@@ -63,6 +63,7 @@
 		serial0 = &serial0;
 		serial1 = &serial1;
 		serial2 = &serial2;
+		serial3 = &serialsc;
 		i2c0 = &i2c0;
 		i2c4 = &i2c4;
 		i2c5 = &i2c5;
@@ -79,6 +80,10 @@
 };
 
 &ethsc {
+	interrupts = <0 52 4>;
+};
+
+&serialsc {
 	interrupts = <0 52 4>;
 };
 
