@@ -77,6 +77,127 @@ static struct uniphier_clk_init_data proxstream2_clk_idata[] __initdata = {
 			.bit_idx = 10,
 		},
 	},
+	{
+		.name = "xhci0-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = NULL,
+			.reg = 0x2000,
+			.bit_idx = 17,
+		},
+	},
+	{
+		.name = "xhci1-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = NULL,
+			.reg = 0x2004,
+			.bit_idx = 17,
+		},
+	},
+	{
+		.name = "xhci0-usb3phy-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = "xhci0-reset",
+			.reg = 0x2014,
+			.bit_idx = 0,
+		},
+	},
+	{
+		.name = "xhci1-usb3phy-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = "xhci1-reset",
+			.reg = 0x2014,
+			.bit_idx = 1,
+		},
+	},
+	{
+		.name = "xhci0-usb3phy2-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = "xhci0-reset",
+			.reg = 0x2014,
+			.bit_idx = 2,
+		},
+	},
+	{
+		.name = "xhci0-usb2phy-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = "xhci0-reset",
+			.reg = 0x2014,
+			.bit_idx = 4,
+		},
+	},
+	{
+		.name = "xhci1-usb2phy-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = "xhci1-reset",
+			.reg = 0x2014,
+			.bit_idx = 5,
+		},
+	},
+	{
+		.name = "xhci0-usb3phy-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 20,
+		.data.gate = {
+			.parent_name = "xhci0-usb3phy-reset",
+			.reg = 0x2104,
+			.bit_idx = 16,
+		},
+	},
+	{
+		.name = "xhci1-usb3phy-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 21,
+		.data.gate = {
+			.parent_name = "xhci1-usb3phy-reset",
+			.reg = 0x2104,
+			.bit_idx = 17,
+		},
+	},
+	{
+		.name = "xhci0-usb3phy2-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 22,
+		.data.gate = {
+			.parent_name = "xhci0-usb3phy2-reset",
+			.reg = 0x2104,
+			.bit_idx = 18,
+		},
+	},
+	{
+		.name = "xhci0-usb2phy-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 23,
+		.data.gate = {
+			.parent_name = "xhci0-usb2phy-reset",
+			.reg = 0x2104,
+			.bit_idx = 19,
+		},
+	},
+	{
+		.name = "xhci1-usb2phy-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 24,
+		.data.gate = {
+			.parent_name = "xhci1-usb2phy-reset",
+			.reg = 0x2104,
+			.bit_idx = 20,
+		},
+	},
+
 	{ /* sentinel */ }
 };
 

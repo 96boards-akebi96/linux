@@ -97,6 +97,46 @@ static struct uniphier_clk_init_data ph1_pro5_clk_idata[] __initdata = {
 			.bit_idx = 10,
 		},
 	},
+	{
+		.name = "xhci0-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = NULL,
+			.reg = 0x2000,
+			.bit_idx = 17,
+		},
+	},
+	{
+		.name = "xhci1-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = NULL,
+			.reg = 0x2004,
+			.bit_idx = 17,
+		},
+	},
+	{
+		.name = "xhci0-usb3phy-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 20,
+		.data.gate = {
+			.parent_name = "xhci0-reset",
+			.reg = 0x2104,
+			.bit_idx = 16,
+		},
+	},
+	{
+		.name = "xhci1-usb3phy-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 21,
+		.data.gate = {
+			.parent_name = "xhci1-reset",
+			.reg = 0x2104,
+			.bit_idx = 17,
+		},
+	},
 	{ /* sentinel */ }
 };
 
