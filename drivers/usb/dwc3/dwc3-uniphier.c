@@ -171,12 +171,13 @@ static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *dwc3u)
 		vptr_i = dwc3u->base + priv->testi_reg + (i * 0x10);
 		vptr_o = dwc3u->base + priv->testo_reg + (i * 0x10);
 
-		pphy_test_io(vptr_i, vptr_o, 11, 0xf,  9);
-		pphy_test_io(vptr_i, vptr_o,  9, 0xf,  3);
-		pphy_test_io(vptr_i, vptr_o, 19, 0xf, 15);
-		pphy_test_io(vptr_i, vptr_o,  8, 0xf,  3);
-		pphy_test_io(vptr_i, vptr_o, 23, 0xc,  0);
-		pphy_test_io(vptr_i, vptr_o, 28, 0x3,  1);
+		pphy_test_io(vptr_i, vptr_o,  7, 0xf, 0xa);
+		pphy_test_io(vptr_i, vptr_o,  8, 0xf, 0x3);
+		pphy_test_io(vptr_i, vptr_o,  9, 0xf, 0x5);
+		pphy_test_io(vptr_i, vptr_o, 11, 0xf, 0x9);
+		pphy_test_io(vptr_i, vptr_o, 13, 0x60, 0x40);
+		pphy_test_io(vptr_i, vptr_o, 27, 0x7, 0x7);
+		pphy_test_io(vptr_i, vptr_o, 28, 0x3, 0x1);
 	}
 
 	/* release reset */
