@@ -164,6 +164,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_usb2>;
 		clocks = <&mio 4>, <&mio 8>;
+		phys = <&usbphy>;
+		phy-names = "usb";
 	};
 
 	usb3: usb@5a810100 {
@@ -174,6 +176,14 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_usb3>;
 		clocks = <&mio 5>, <&mio 8>;
+		phys = <&usbphy>;
+		phy-names = "usb";
+	};
+
+	usbphy: usbphy@5f800500 {
+		#phy-cells = <0>;
+		compatible = "socionext,ph1-pro4-usbphy";
+		reg = <0x5f800500 0x20>;
 	};
 
 	aidet@5fc20000 {

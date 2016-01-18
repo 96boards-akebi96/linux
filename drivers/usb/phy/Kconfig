@@ -231,4 +231,13 @@ config DUAL_ROLE_USB_INTF
 	  this interface to expose it capabilities to the userspace
 	  and thereby allowing userspace to change the port mode.
 
+config UNIPHIER_USB_PHY
+	tristate "UniPhier USB PHY Driver"
+	depends on ARCH_UNIPHIER || COMPILE_TEST
+	select NOP_USB_XCEIV
+	help
+	  Enable this to support UniPhier USB PHY. This driver provides
+	  interface to interact with USB PHY that is part
+	  of the UniPhier SoC.
+
 endmenu
