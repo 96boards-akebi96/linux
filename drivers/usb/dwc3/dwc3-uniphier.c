@@ -291,6 +291,104 @@ static void dwc3_uniphier_exit_pro5(struct dwc3_uniphier *dwc3u)
 	return;
 }
 
+/* for Pro4 */
+
+static void dwc3_uniphier_init_pro4(struct dwc3_uniphier *);
+static void dwc3_uniphier_exit_pro4(struct dwc3_uniphier *);
+
+static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_pro4 = {
+	.init = dwc3_uniphier_init_pro4,
+	.exit = dwc3_uniphier_exit_pro4,
+	.reset_reg        = 0x040,
+	.reset_bit_link   = 4,
+	.reset_bit_iommu  = 5,
+	.vbus_reg         = 0x000,
+	.vbus_bit_en      = 3,
+	.vbus_bit_onoff   = 4,
+	.host_cfg_reg     = NO_USE,
+	.host_cfg_bit_u2  = NO_USE,
+	.host_cfg_bit_u3  = NO_USE,
+	.testi_reg        = 0x010,
+	.testo_reg        = 0x014,
+};
+
+static inline void pphy_test_io_pro4(void __iomem *vptr_i, void __iomem *vptr_o, u32 data0)
+{
+	int i;
+
+        writel(data0 | 0, vptr_i);
+	for(i=0; i<10; i++){
+		readl(vptr_o);
+	}
+
+        writel(data0 | 1, vptr_i);
+	for(i=0; i<10; i++){
+		readl(vptr_o);
+	}
+
+        writel(data0 | 0, vptr_i);
+	for(i=0; i<10; i++){
+		readl(vptr_o);
+	}
+
+	return;
+}
+
+static void dwc3_uniphier_init_pro4(struct dwc3_uniphier *dwc3u)
+{
+	void __iomem *vptr_i, *vptr_o;
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
+	/* control the VBUS  */
+	if (!dwc3u->vbus_supply){
+		maskwritel(dwc3u->base, priv->vbus_reg,
+			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
+			   (1 << priv->vbus_bit_en) | 0);
+	}
+
+	/* set up SS-PHY */
+	vptr_i = dwc3u->base + priv->testi_reg;
+	vptr_o = dwc3u->base + priv->testo_reg;
+
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x206);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x08e);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x27c);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x2b8);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x102);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x22a);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x02c);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x100);
+	pphy_test_io_pro4(vptr_i, vptr_o, 0x09a);
+
+	/* release reset */
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu),
+		   0);
+	msleep(1);
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu),
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu));
+
+	return;
+}
+
+static void dwc3_uniphier_exit_pro4(struct dwc3_uniphier *dwc3u)
+{
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
+	/* reset */
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu), 0);
+
+	/* control the VBUS */
+	if (!dwc3u->vbus_supply){
+		maskwritel(dwc3u->base, priv->vbus_reg,
+			   (1 << priv->vbus_bit_en), 0);
+	}
+
+	return;
+}
+
 static const struct of_device_id of_dwc3_match[];
 
 static int dwc3_uniphier_probe(struct platform_device *pdev)
@@ -457,6 +555,10 @@ static const struct of_device_id of_dwc3_match[] = {
 	{
 		.compatible = "socionext,ph1-pro5-dwc3",
 		.data       = (void *)&dwc3_uniphier_priv_data_pro5,
+	},
+	{
+		.compatible = "socionext,ph1-pro4-dwc3",
+		.data       = (void *)&dwc3_uniphier_priv_data_pro4,
 	},
 	{ /* Sentinel */ }
 };

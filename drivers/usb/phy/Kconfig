@@ -234,6 +234,7 @@ config DUAL_ROLE_USB_INTF
 config UNIPHIER_USB_PHY
 	tristate "UniPhier USB PHY Driver"
 	depends on ARCH_UNIPHIER || COMPILE_TEST
+	default y if USB_DWC3_UNIPHIER
 	select NOP_USB_XCEIV
 	help
 	  Enable this to support UniPhier USB PHY. This driver provides
