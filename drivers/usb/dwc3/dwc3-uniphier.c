@@ -26,33 +26,11 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 
-/* for RESET_CTL */
-#define XHCI_RESET_CTL_REG		(0x000)		/* Reset Control Register */
-#define LINK_RESET_N			(1 << 15)
-#define IOMMU_RESET_N			(1 << 14)
-
-/* for VBUS_CONTROL */
-#define XHCI_USB3_VBUS_CONTROL_REG	(0x100)		/* USB3 VBUS Control */
-#define XHCI_USB3_VBUS_DRVVBUS_REG_EN	(1<<3)          /* VBUS ON Controled by EN */
-#define XHCI_USB3_VBUS_DRVVBUS_REG	(1<<4)          /* VBUS ON */
-
-/* for PXs2 SSPHY_TEST */
-#define USB3_P_SSPHY_TEST_REG		(0x300)
-#define TEST_I_OFFSET			0x00
-#define TEST_O_OFFSET			0x04
-
-/* for Pro5 {SSPHY,HSPHY}_PARAM */
-#define XHCI_HSPHY_PARAM2_REG		(0x288)
-#define XHCI_SSPHY_PARAM2_REG		(0x384)
-#define XHCI_SSPHY_PARAM3_REG		(0x388)
-
-/* for HOST_CONFIG0 */
-#define HOST_CONFIG0_REG		(0x400)		/* SoC dependent register */
-#define NUM_U3(n)			((n) << 11)
-#define NUM_U2(n)			((n) <<  8)
 #define NUM_U_MASK			(0x07)
 
-#define UNIPHIER_USB_PORT_MAX 8
+#define UNIPHIER_USB_PORT_MAX		8
+
+struct dwc3_uniphier_priv_t;
 
 struct dwc3_uniphier {
 	struct device		*dev;
@@ -63,7 +41,31 @@ struct dwc3_uniphier {
 	bool			vbus_supply;
 	u32			ss_instances;
 	u32			hs_instances;
+	struct dwc3_uniphier_priv_t	*priv;
 };
+
+struct dwc3_uniphier_priv_t {
+
+	void (*init)(struct dwc3_uniphier *);		/* initialize function */
+	void (*exit)(struct dwc3_uniphier *);		/* finalize funtion */
+
+	u32 reset_reg;			/* offset address for XHCI_RESET_CTL */
+	u32 reset_bit_link;		/* bit number for XHCI_RESET_CTL.LINK_RESET_N */
+	u32 reset_bit_iommu;		/* bit number for XHCI_RESET_CTL.IOMMU_RESET_N */
+
+	u32 vbus_reg;			/* offset address for VBUS_CONTROL_REG */
+	u32 vbus_bit_en;		/* bit number for VBUS_CONTROL_REG.DRVVBUS_REG_EN */
+	u32 vbus_bit_onoff;		/* bit number for VBUS_CONTROL_REG.DRVVBUS_REG */
+
+	u32 host_cfg_reg;		/* offset address for HOST_CONFIGO_REG */
+	u32 host_cfg_bit_u2;		/* bit number for HOST_CONFIG0.NUM_U2 */
+	u32 host_cfg_bit_u3;		/* bit number for HOST_CONFIG0.NUM_U3 */
+
+	u32 testi_reg;			/* offset address for TESTI_REG */
+	u32 testo_reg;			/* offset address for TESTO_REG */
+};
+
+#define NO_USE ((u32)~0)
 
 static inline void maskwritel(void __iomem *base, u32 offset, u32 mask, u32 value)
 {
@@ -73,6 +75,26 @@ static inline void maskwritel(void __iomem *base, u32 offset, u32 mask, u32 valu
 }
 
 /* for PXs2 */
+
+static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *);
+static void dwc3_uniphier_exit_pxs2(struct dwc3_uniphier *);
+
+static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_pxs2 = {
+	.init = dwc3_uniphier_init_pxs2,
+	.exit = dwc3_uniphier_exit_pxs2,
+	.reset_reg        = 0x000,
+	.reset_bit_link   = 15,
+	.reset_bit_iommu  = NO_USE,
+	.vbus_reg         = 0x100,
+	.vbus_bit_en      = 3,
+	.vbus_bit_onoff   = 4,
+	.host_cfg_reg     = 0x400,
+	.host_cfg_bit_u2  = 8,
+	.host_cfg_bit_u3  = 11,
+	.testi_reg        = 0x300,
+	.testo_reg        = 0x304,
+};
+
 static inline void pphy_test_io(void __iomem *vptr_i, void __iomem *vptr_o,
 				u32 data0, u32 mask1, u32 data1)
 {
@@ -127,25 +149,28 @@ static inline void pphy_test_io(void __iomem *vptr_i, void __iomem *vptr_o,
 static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *dwc3u)
 {
 	int i;
-	void __iomem *vptr, *vptr_i, *vptr_o;
+	void __iomem *vptr_i, *vptr_o;
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
 
 	/* set numbers of port */
-	maskwritel(dwc3u->base, HOST_CONFIG0_REG,
-		   NUM_U3(NUM_U_MASK) | NUM_U2(NUM_U_MASK),
-		   NUM_U3(dwc3u->ss_instances) | NUM_U2(dwc3u->hs_instances));
+	maskwritel(dwc3u->base, priv->host_cfg_reg,
+		     (NUM_U_MASK << priv->host_cfg_bit_u3)
+		   | (NUM_U_MASK << priv->host_cfg_bit_u2),
+		     ((dwc3u->ss_instances & NUM_U_MASK) << priv->host_cfg_bit_u3)
+		   | ((dwc3u->hs_instances & NUM_U_MASK) << priv->host_cfg_bit_u2));
 
 	/* control the VBUS  */
 	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, XHCI_USB3_VBUS_CONTROL_REG,
-			   XHCI_USB3_VBUS_DRVVBUS_REG | XHCI_USB3_VBUS_DRVVBUS_REG_EN,
-			   XHCI_USB3_VBUS_DRVVBUS_REG_EN);
+		maskwritel(dwc3u->base, priv->vbus_reg,
+			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
+			   (1 << priv->vbus_bit_en) | 0);
 	}
 
 	/* set up PHY */
 	for(i=0; i < dwc3u->ss_instances; i++) {
-		vptr = dwc3u->base + USB3_P_SSPHY_TEST_REG + (i * 0x10);
-		vptr_i = vptr + TEST_I_OFFSET;
-		vptr_o = vptr + TEST_O_OFFSET;
+		vptr_i = dwc3u->base + priv->testi_reg + (i * 0x10);
+		vptr_o = dwc3u->base + priv->testo_reg + (i * 0x10);
+
 		pphy_test_io(vptr_i, vptr_o, 11, 0xf,  9);
 		pphy_test_io(vptr_i, vptr_o,  9, 0xf,  3);
 		pphy_test_io(vptr_i, vptr_o, 19, 0xf, 15);
@@ -155,23 +180,75 @@ static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *dwc3u)
 	}
 
 	/* release reset */
-	maskwritel(dwc3u->base, XHCI_RESET_CTL_REG, LINK_RESET_N, LINK_RESET_N );
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link),
+		   0);
+	msleep(1);
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link),
+		   (1 << priv->reset_bit_link));
 
 	return;
 }
 
+static void dwc3_uniphier_exit_pxs2(struct dwc3_uniphier *dwc3u)
+{
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
+	/* reset */
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link), 0);
+
+	/* control the VBUS */
+	if (!dwc3u->vbus_supply){
+		maskwritel(dwc3u->base, priv->vbus_reg,
+			   (1 << priv->vbus_bit_en), 0);
+	}
+
+	return;
+}
+
+/* for Pro5 */
+
+static void dwc3_uniphier_init_pro5(struct dwc3_uniphier *);
+static void dwc3_uniphier_exit_pro5(struct dwc3_uniphier *);
+
+static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_pro5 = {
+	.init = dwc3_uniphier_init_pro5,
+	.exit = dwc3_uniphier_exit_pro5,
+	.reset_reg        = 0x000,
+	.reset_bit_link   = 15,
+	.reset_bit_iommu  = 14,
+	.vbus_reg         = 0x100,
+	.vbus_bit_en      = 3,
+	.vbus_bit_onoff   = 4,
+	.host_cfg_reg     = 0x400,
+	.host_cfg_bit_u2  = 8,
+	.host_cfg_bit_u3  = 11,
+	.testi_reg        = NO_USE,
+	.testo_reg        = NO_USE,
+};
+
+#define XHCI_HSPHY_PARAM2_REG		(0x288)
+#define XHCI_SSPHY_PARAM2_REG		(0x384)
+#define XHCI_SSPHY_PARAM3_REG		(0x388)
+
 static void dwc3_uniphier_init_pro5(struct dwc3_uniphier *dwc3u)
 {
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
 	/* set numbers of port */
-	maskwritel(dwc3u->base, HOST_CONFIG0_REG,
-		   NUM_U3(NUM_U_MASK) | NUM_U2(NUM_U_MASK),
-		   NUM_U3(dwc3u->ss_instances) | NUM_U2(dwc3u->hs_instances));
+	maskwritel(dwc3u->base, priv->host_cfg_reg,
+		     (NUM_U_MASK << priv->host_cfg_bit_u3)
+		   | (NUM_U_MASK << priv->host_cfg_bit_u2),
+		     ((dwc3u->ss_instances & NUM_U_MASK) << priv->host_cfg_bit_u3)
+		   | ((dwc3u->hs_instances & NUM_U_MASK) << priv->host_cfg_bit_u2));
 
 	/* control the VBUS  */
 	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, XHCI_USB3_VBUS_CONTROL_REG,
-			   XHCI_USB3_VBUS_DRVVBUS_REG | XHCI_USB3_VBUS_DRVVBUS_REG_EN,
-			   XHCI_USB3_VBUS_DRVVBUS_REG_EN);
+		maskwritel(dwc3u->base, priv->vbus_reg,
+			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
+			   (1 << priv->vbus_bit_en) | 0);
 	}
 
 	/* set up PHY */
@@ -181,48 +258,40 @@ static void dwc3_uniphier_init_pro5(struct dwc3_uniphier *dwc3u)
 	maskwritel(dwc3u->base, XHCI_HSPHY_PARAM2_REG, 0x7f7f0000, 0x7d310000);
 	/* SSPHY Loopback off */
 	maskwritel(dwc3u->base, XHCI_SSPHY_PARAM2_REG, 0x00800000, 0x00000000);
+
 	/* release PHY power on reset */
-	maskwritel(dwc3u->base, XHCI_RESET_CTL_REG, 0x00030000, 0x00000000);
+	maskwritel(dwc3u->base, priv->reset_reg, 0x00030000, 0x00000000);
 
 	/* release reset */
-	maskwritel(dwc3u->base, XHCI_RESET_CTL_REG,
-		   LINK_RESET_N | IOMMU_RESET_N, 0x00000000);
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu),
+		   0);
 	msleep(1);
-	maskwritel(dwc3u->base, XHCI_RESET_CTL_REG,
-		   LINK_RESET_N | IOMMU_RESET_N,
-		   LINK_RESET_N | IOMMU_RESET_N );
-
-	return;
-}
-
-static void dwc3_uniphier_exit_pxs2(struct dwc3_uniphier *dwc3u)
-{
-	/* reset */
-	maskwritel(dwc3u->base, XHCI_RESET_CTL_REG, LINK_RESET_N, 0x00000000);
-
-	/* control the VBUS */
-	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, XHCI_USB3_VBUS_CONTROL_REG,
-			   XHCI_USB3_VBUS_DRVVBUS_REG_EN, 0x00000000);
-	}
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu),
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu));
 
 	return;
 }
 
 static void dwc3_uniphier_exit_pro5(struct dwc3_uniphier *dwc3u)
 {
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
 	/* reset */
-	maskwritel(dwc3u->base, XHCI_RESET_CTL_REG,
-		   LINK_RESET_N | IOMMU_RESET_N, 0x00000000);
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu), 0);
 
 	/* control the VBUS */
 	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, XHCI_USB3_VBUS_CONTROL_REG,
-			   XHCI_USB3_VBUS_DRVVBUS_REG_EN, 0x00000000);
+		maskwritel(dwc3u->base, priv->vbus_reg,
+			   (1 << priv->vbus_bit_en), 0);
 	}
 
 	return;
 }
+
+static const struct of_device_id of_dwc3_match[];
 
 static int dwc3_uniphier_probe(struct platform_device *pdev)
 {
@@ -230,10 +299,15 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 	struct dwc3_uniphier *dwc3u;
 	struct resource	*res;
 	struct device *dev = &pdev->dev;
+	const struct of_device_id *of_id;
 	void __iomem *base;
 	int ret;
 	int i, u3count, u2count;
 	char clkname[8];
+
+	of_id = of_match_device(of_dwc3_match, dev);
+	if (!of_id)
+		return -EINVAL;
 
 	dwc3u = devm_kzalloc(&pdev->dev, sizeof(*dwc3u), GFP_KERNEL);
 	if (!dwc3u)
@@ -249,6 +323,7 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 	dwc3u->dev         = dev;
 	dwc3u->base        = base;
 	dwc3u->vbus_supply = of_property_read_bool(node, "vbus-supply");
+	dwc3u->priv        = (struct dwc3_uniphier_priv_t *)of_id->data;
 
 	/* SS(U3) instances */
 	if ((of_property_read_u32(node, "ss-instances", &dwc3u->ss_instances))
@@ -321,11 +396,8 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 	}
 
 	/* initialize SoC glue */
-	if (of_device_is_compatible(node, "socionext,proxstream2-dwc3")) {
-		dwc3_uniphier_init_pxs2(dwc3u);
-	}
-	else if (of_device_is_compatible(node, "socionext,ph1-pro5-dwc3")) {
-		dwc3_uniphier_init_pro5(dwc3u);
+	if (dwc3u->priv->init) {
+		(dwc3u->priv->init)(dwc3u);
 	}
 
 	ret = of_platform_populate(node, NULL, NULL, dwc3u->dev);
@@ -337,11 +409,8 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 	return 0;
 
 err_dwc3:
-	if (of_device_is_compatible(node, "socionext,proxstream2-dwc3")) {
-		dwc3_uniphier_exit_pxs2(dwc3u);
-	}
-	else if (of_device_is_compatible(node, "socionext,ph1-pro5-dwc3")) {
-		dwc3_uniphier_exit_pro5(dwc3u);
+	if (dwc3u->priv->exit) {
+		(dwc3u->priv->exit)(dwc3u);
 	}
 
 err_clks:
@@ -358,17 +427,13 @@ err_clks:
 
 static int dwc3_uniphier_remove(struct platform_device *pdev)
 {
-	struct device_node *node = pdev->dev.of_node;
 	struct dwc3_uniphier *dwc3u = platform_get_drvdata(pdev);
 	int i;
 
 	of_platform_depopulate(&pdev->dev);
 
-	if (of_device_is_compatible(node, "socionext,proxstream2-dwc3")) {
-		dwc3_uniphier_exit_pxs2(dwc3u);
-	}
-	else if (of_device_is_compatible(node, "socionext,ph1-pro5-dwc3")) {
-		dwc3_uniphier_exit_pro5(dwc3u);
+	if (dwc3u->priv->exit) {
+		(dwc3u->priv->exit)(dwc3u);
 	}
 
 	for(i=0;i<UNIPHIER_USB_PORT_MAX;i++) {
@@ -385,8 +450,14 @@ static int dwc3_uniphier_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id of_dwc3_match[] = {
-	{ .compatible = "socionext,proxstream2-dwc3" },
-	{ .compatible = "socionext,ph1-pro5-dwc3" },
+	{
+		.compatible = "socionext,proxstream2-dwc3",
+		.data       = (void *)&dwc3_uniphier_priv_data_pxs2,
+	},
+	{
+		.compatible = "socionext,ph1-pro5-dwc3",
+		.data       = (void *)&dwc3_uniphier_priv_data_pro5,
+	},
 	{ /* Sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, of_dwc3_match);
