@@ -107,6 +107,46 @@ static struct uniphier_clk_init_data ph1_pro4_clk_idata[] __initdata = {
 			.div = 12,
 		},
 	},
+	{
+		.name = "xhci0",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = NULL,
+			.reg = 0x2000,
+			.bit_idx = 17,
+		},
+	},
+	{
+		.name = "xhci1",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = NULL,
+			.reg = 0x2004,
+			.bit_idx = 17,
+		},
+	},
+	{
+		.name = "xhci0-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 20,
+		.data.gate = {
+			.parent_name = "xhci0",
+			.reg = 0x2104,
+			.bit_idx = 16,
+		},
+	},
+	{
+		.name = "xhci1-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 21,
+		.data.gate = {
+			.parent_name = "xhci1",
+			.reg = 0x2104,
+			.bit_idx = 17,
+		},
+	},
 	{ /* sentinel */ }
 };
 
