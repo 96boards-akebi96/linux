@@ -65,5 +65,10 @@
 			clock-frequency = <12288000>;
 			reg-shift = <1>;
 		};
+
+		sc7seg: sc7seg@00090000 {
+			compatible = "socionext,sc7seg";
+			reg = <0x00090000 0x10>;
+		};
 	};
 };
