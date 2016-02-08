@@ -211,6 +211,7 @@
 		clocks = <&mio 4>, <&mio 8>;
 		phys = <&usbphy>;
 		phy-names = "usb";
+		has-transaction-translator;
 	};
 
 	usb3: usb@5a810100 {
@@ -223,6 +224,7 @@
 		clocks = <&mio 5>, <&mio 8>;
 		phys = <&usbphy>;
 		phy-names = "usb";
+		has-transaction-translator;
 	};
 
 	usbphy: usbphy@5f800500 {
