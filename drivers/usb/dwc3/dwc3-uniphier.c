@@ -39,8 +39,6 @@ struct dwc3_uniphier {
 	struct clk		*u3clk[UNIPHIER_USB_PORT_MAX];
 	struct clk		*u2clk[UNIPHIER_USB_PORT_MAX];
 	bool			vbus_supply;
-	u32			ss_instances;
-	u32			hs_instances;
 	struct dwc3_uniphier_priv_t	*priv;
 };
 
@@ -151,13 +149,7 @@ static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *dwc3u)
 	int i;
 	void __iomem *vptr_i, *vptr_o;
 	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
-
-	/* set numbers of port */
-	maskwritel(dwc3u->base, priv->host_cfg_reg,
-		     (NUM_U_MASK << priv->host_cfg_bit_u3)
-		   | (NUM_U_MASK << priv->host_cfg_bit_u2),
-		     ((dwc3u->ss_instances & NUM_U_MASK) << priv->host_cfg_bit_u3)
-		   | ((dwc3u->hs_instances & NUM_U_MASK) << priv->host_cfg_bit_u2));
+	int ss_instances;
 
 	/* control the VBUS  */
 	if (!dwc3u->vbus_supply){
@@ -166,8 +158,9 @@ static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *dwc3u)
 			   (1 << priv->vbus_bit_en) | 0);
 	}
 
-	/* set up PHY */
-	for(i=0; i < dwc3u->ss_instances; i++) {
+	/* set up SS-PHY */
+	ss_instances = (readl(dwc3u->base + priv->host_cfg_reg) >> priv->host_cfg_bit_u3) & NUM_U_MASK;
+	for(i=0; i < ss_instances; i++) {
 		vptr_i = dwc3u->base + priv->testi_reg + (i * 0x10);
 		vptr_o = dwc3u->base + priv->testo_reg + (i * 0x10);
 
@@ -237,13 +230,6 @@ static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_pro5 = {
 static void dwc3_uniphier_init_pro5(struct dwc3_uniphier *dwc3u)
 {
 	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
-
-	/* set numbers of port */
-	maskwritel(dwc3u->base, priv->host_cfg_reg,
-		     (NUM_U_MASK << priv->host_cfg_bit_u3)
-		   | (NUM_U_MASK << priv->host_cfg_bit_u2),
-		     ((dwc3u->ss_instances & NUM_U_MASK) << priv->host_cfg_bit_u3)
-		   | ((dwc3u->hs_instances & NUM_U_MASK) << priv->host_cfg_bit_u2));
 
 	/* control the VBUS  */
 	if (!dwc3u->vbus_supply){
@@ -423,20 +409,6 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 	dwc3u->base        = base;
 	dwc3u->vbus_supply = of_property_read_bool(node, "vbus-supply");
 	dwc3u->priv        = (struct dwc3_uniphier_priv_t *)of_id->data;
-
-	/* SS(U3) instances */
-	if ((of_property_read_u32(node, "ss-instances", &dwc3u->ss_instances))
-	  || (dwc3u->ss_instances > NUM_U_MASK)) {
-		dev_err(dev, "illegal SS instances (%d)\n", dwc3u->ss_instances);
-		return -EINVAL;
-	}
-
-	/* HS(U2) instances */
-	if ((of_property_read_u32(node, "hs-instances", &dwc3u->hs_instances))
-	  || (dwc3u->hs_instances > NUM_U_MASK)) {
-		dev_err(dev, "illegal HS instances (%d)\n", dwc3u->hs_instances);
-		return -EINVAL;
-	}
 
 	/* clk control */
 	u3count = 0;

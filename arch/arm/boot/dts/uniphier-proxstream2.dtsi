@@ -195,8 +195,6 @@
 		clock-names = "u3clk0", "u3clk1", "u2clk0";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		ss-instances = <2>;
-		hs-instances = <2>;
 		vbus-supply;
 		ranges;
 		dwc3@65a00000 {
@@ -218,8 +216,6 @@
 		clock-names = "u3clk0", "u2clk0";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		ss-instances = <1>;
-		hs-instances = <2>;
 		vbus-supply;
 		ranges;
 		dwc3@65c00000 {
