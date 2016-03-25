@@ -64,17 +64,12 @@
 		serial1 = &serial1;
 		serial2 = &serialsc;
 		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
 	};
-};
-
-&extbus {
-	ranges = <1 0x00000000 0x42000000 0x02000000>;
-};
-
-&support_card {
-	ranges = <0x00000000 1 0x01f00000 0x00100000>;
 };
 
 &ethsc {
@@ -94,6 +89,23 @@
 };
 
 &i2c0 {
+	status = "okay";
+
+	eeprom@54 {
+		compatible = "st,24c64";
+		reg = <0x54>;
+	};
+};
+
+&i2c1 {
+	status = "okay";
+};
+
+&i2c2 {
+	status = "okay";
+};
+
+&i2c3 {
 	status = "okay";
 };
 
