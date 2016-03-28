@@ -226,6 +226,7 @@ static int __init uniphier_smp_boot_secondary(unsigned int cpu,
 static void __init uniphier_smp_secondary_init(unsigned int cpu)
 {
 	uniphier_smp_fixup_cache_broadcast();
+	uniphier_cache_secondary_init();
 }
 
 static struct smp_operations uniphier_smp_ops __initdata = {

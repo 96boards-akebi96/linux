@@ -19,6 +19,7 @@
 
 #ifdef CONFIG_CACHE_UNIPHIER
 int uniphier_cache_init(void);
+void uniphier_cache_secondary_init(void);
 int uniphier_cache_l2_is_enabled(void);
 void uniphier_cache_l2_touch_range(unsigned long start, unsigned long end);
 void uniphier_cache_l2_set_locked_ways(u32 way_mask);
@@ -26,6 +27,10 @@ void uniphier_cache_l2_set_locked_ways(u32 way_mask);
 static inline int uniphier_cache_init(void)
 {
 	return -ENODEV;
+}
+
+static inline void uniphier_cache_secondary_init(void)
+{
 }
 
 static inline int uniphier_cache_l2_is_enabled(void)
