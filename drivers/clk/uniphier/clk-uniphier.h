@@ -38,6 +38,7 @@ struct uniphier_clk_gate_data {
 	const char *parent_name;
 	unsigned int reg;
 	u8 bit_idx;
+	u8 flags;
 };
 
 struct uniphier_clk_mux_data {
@@ -45,6 +46,7 @@ struct uniphier_clk_mux_data {
 	u8 num_parents;
 	unsigned int reg;
 	u8 shift;
+	u8 flags;
 };
 
 struct uniphier_clk_init_data {

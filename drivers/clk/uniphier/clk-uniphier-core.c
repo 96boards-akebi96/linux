@@ -43,7 +43,8 @@ static struct clk * __init uniphier_clk_register(struct device_node *np,
 					 idata->data.gate.parent_name ?
 					 CLK_SET_RATE_PARENT : CLK_IS_ROOT,
 					 regbase + idata->data.gate.reg,
-					 idata->data.gate.bit_idx, 0, NULL);
+					 idata->data.gate.bit_idx,
+					 idata->data.gate.flags, NULL);
 	case UNIPHIER_CLK_TYPE_MUX:
 		return clk_register_mux(NULL, idata->name,
 					idata->data.mux.parent_names,
@@ -52,7 +53,7 @@ static struct clk * __init uniphier_clk_register(struct device_node *np,
 					regbase + idata->data.mux.reg,
 					idata->data.mux.shift,
 					ilog2(idata->data.mux.num_parents),
-					0, NULL);
+					idata->data.mux.flags, NULL);
 	default:
 		WARN(1, "unsupported clock type\n");
 		return ERR_PTR(-EINVAL);
