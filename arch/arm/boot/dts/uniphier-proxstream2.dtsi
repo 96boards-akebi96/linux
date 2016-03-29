@@ -190,7 +190,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_usb0>, <&pinctrl_usb2>;
 		reg = <0x65b00000 0x1000>;
-		interrupts = <0 134 4>;
 		clocks = <&sysctrl 20>,<&sysctrl 22>,<&sysctrl 23>;
 		clock-names = "u3clk0", "u3clk1", "u2clk0";
 		#address-cells = <1>;
@@ -211,7 +210,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_usb1>, <&pinctrl_usb3>;
 		reg = <0x65d00000 0x1000>;
-		interrupts = <0 137 4>;
 		clocks = <&sysctrl 21>,<&sysctrl 24>;
 		clock-names = "u3clk0", "u2clk0";
 		#address-cells = <1>;
