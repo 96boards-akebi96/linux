@@ -197,6 +197,37 @@ static struct uniphier_clk_init_data proxstream2_clk_idata[] __initdata = {
 			.bit_idx = 20,
 		},
 	},
+	{
+		.name = "ahci-phy-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = NULL,
+			.reg = 0x2014,
+			.bit_idx = 8,
+			.flags = CLK_GATE_SET_TO_DISABLE,
+		},
+	},
+	{
+		.name = "ahci-link-reset",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = -1,
+		.data.gate = {
+			.parent_name = "ahci-phy-reset",
+			.reg = 0x2014,
+			.bit_idx = 12,
+		},
+	},
+	{
+		.name = "ahci-link-clken",
+		.type = UNIPHIER_CLK_TYPE_GATE,
+		.output_index = 25,
+		.data.gate = {
+			.parent_name = "ahci-link-reset",
+			.reg = 0x2104,
+			.bit_idx = 22,
+		},
+	},
 
 	{ /* sentinel */ }
 };
