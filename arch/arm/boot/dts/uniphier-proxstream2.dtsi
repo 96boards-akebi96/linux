@@ -223,6 +223,14 @@
 			tx-fifo-resize;
 		};
 	};
+
+	ahci@65600000 {
+		compatible = "socionext,uniphier-ahci";
+		reg = <0x65600000 0x10000>, /* AHCI */
+		      <0x65700000 0x40>;    /* Glue */
+		interrupts = <0 142 4>;
+		clocks = <&sysctrl 25>;
+	};
 };
 
 &refclk {
