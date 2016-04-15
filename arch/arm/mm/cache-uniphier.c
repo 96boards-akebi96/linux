@@ -328,24 +328,16 @@ static void uniphier_cache_disable(void)
 	uniphier_cache_flush_all();
 }
 
-static void __init uniphier_cache_activate_all_ways(void)
-{
-	struct uniphier_cache_data *data;
-
-	list_for_each_entry(data, &uniphier_cache_list, list)
-		__uniphier_cache_set_locked_ways(data, 0);
-}
-
 static void __init uniphier_cache_enable(void)
 {
 	struct uniphier_cache_data *data;
 
 	uniphier_cache_inv_all();
 
-	list_for_each_entry(data, &uniphier_cache_list, list)
+	list_for_each_entry(data, &uniphier_cache_list, list) {
 		__uniphier_cache_enable(data, true);
-
-	uniphier_cache_activate_all_ways();
+		__uniphier_cache_set_locked_ways(data, 0);
+	}
 }
 
 static void uniphier_cache_sync(void)
@@ -581,9 +573,4 @@ int __init uniphier_cache_init(void)
 	pr_info("enabled outer cache (cache level: %d)\n", cache_level);
 
 	return ret;
-}
-
-void uniphier_cache_secondary_init(void)
-{
-	uniphier_cache_activate_all_ways();
 }
