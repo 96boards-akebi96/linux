@@ -170,18 +170,6 @@ static int __init uniphier_smp_enable_scu(void)
 	return 0;
 }
 
-static void __init uniphier_smp_fixup_cache_broadcast(void)
-{
-	u32 tmp;
-
-	asm volatile(
-		"mrc	p15, 0, %0, c1, c0, 1\n"
-		"tst	%0, #(1 << 6)\n"
-		"orrne	%0, #(1 << 0)\n"
-		"mcr	p15, 0, %0, c1, c0, 1\n"
-		: "=r" (tmp) : : "memory", "cc");
-}
-
 static void __init uniphier_smp_prepare_cpus(unsigned int max_cpus)
 {
 	static cpumask_t only_cpu_0 = { CPU_BITS_CPU0 };
@@ -194,8 +182,6 @@ static void __init uniphier_smp_prepare_cpus(unsigned int max_cpus)
 	ret = uniphier_smp_enable_scu();
 	if (ret)
 		goto err;
-
-	uniphier_smp_fixup_cache_broadcast();
 
 	return;
 err:
@@ -223,15 +209,9 @@ static int __init uniphier_smp_boot_secondary(unsigned int cpu,
 	return 0;
 }
 
-static void __init uniphier_smp_secondary_init(unsigned int cpu)
-{
-	uniphier_smp_fixup_cache_broadcast();
-}
-
 static struct smp_operations uniphier_smp_ops __initdata = {
 	.smp_prepare_cpus	= uniphier_smp_prepare_cpus,
 	.smp_boot_secondary	= uniphier_smp_boot_secondary,
-	.smp_secondary_init	= uniphier_smp_secondary_init,
 };
 CPU_METHOD_OF_DECLARE(uniphier_smp, "socionext,uniphier-smp",
 		      &uniphier_smp_ops);
