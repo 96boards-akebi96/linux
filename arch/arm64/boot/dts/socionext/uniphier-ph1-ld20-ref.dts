@@ -43,6 +43,10 @@
  */
 
 /dts-v1/;
+/memreserve/ 0xbfffffc0 0x40;
+/memreserve/ 0xffffffc0 0x40;
+/memreserve/ 0x13fffffc0 0x40;
+
 /include/ "uniphier-ph1-ld20.dtsi"
 /include/ "uniphier-support-card.dtsi"
 
