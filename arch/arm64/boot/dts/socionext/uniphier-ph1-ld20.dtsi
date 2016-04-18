@@ -138,8 +138,6 @@
 			status = "disabled";
 			reg = <0x54006800 0x40>;
 			interrupts = <0 33 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_uart0>;
 			clocks = <&uart_clk>;
 		};
 
@@ -148,8 +146,6 @@
 			status = "disabled";
 			reg = <0x54006900 0x40>;
 			interrupts = <0 35 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_uart1>;
 			clocks = <&uart_clk>;
 		};
 
@@ -158,8 +154,6 @@
 			status = "disabled";
 			reg = <0x54006a00 0x40>;
 			interrupts = <0 37 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_uart2>;
 			clocks = <&uart_clk>;
 		};
 
@@ -168,8 +162,6 @@
 			status = "disabled";
 			reg = <0x54006b00 0x40>;
 			interrupts = <0 177 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_uart3>;
 			clocks = <&uart_clk>;
 		};
 
@@ -180,8 +172,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 41 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_i2c0>;
 			clocks = <&i2c_clk>;
 			clock-frequency = <100000>;
 		};
@@ -193,8 +183,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 42 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_i2c1>;
 			clocks = <&i2c_clk>;
 			clock-frequency = <100000>;
 		};
@@ -216,8 +204,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 44 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_i2c3>;
 			clocks = <&i2c_clk>;
 			clock-frequency = <100000>;
 		};
@@ -229,8 +215,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 45 4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_i2c4>;
 			clocks = <&i2c_clk>;
 			clock-frequency = <100000>;
 		};
