@@ -32,4 +32,8 @@ config CLK_UNIPHIER_PROXSTREAM2
 	bool "Clock driver for UniPhier ProXstream2/PH1-LD6b SoC"
 	default y
 
+config CLK_UNIPHIER_PH1_LD20
+	bool "Clock driver for UniPhier PH1-LD20 SoC"
+	default y
+
 endif

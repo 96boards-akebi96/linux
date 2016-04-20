@@ -173,3 +173,5 @@ CLK_OF_DECLARE(ph1_pro5_peri_clk, "socionext,ph1-pro5-perictrl",
 	       ph1_pro5_peri_clk_init);
 CLK_OF_DECLARE(proxstream2_peri_clk, "socionext,proxstream2-perictrl",
 	       ph1_pro5_peri_clk_init);
+CLK_OF_DECLARE(ph1_ld20_peri_clk, "socionext,ph1-ld20-perictrl",
+	       ph1_pro5_peri_clk_init);

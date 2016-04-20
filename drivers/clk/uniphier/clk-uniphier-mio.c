@@ -313,3 +313,5 @@ CLK_OF_DECLARE(ph1_pro5_mio_clk, "socionext,ph1-pro5-mioctrl",
 	       ph1_pro5_mio_clk_init);
 CLK_OF_DECLARE(proxstream2_mio_clk, "socionext,proxstream2-mioctrl",
 	       ph1_pro5_mio_clk_init);
+CLK_OF_DECLARE(ph1_ld20_mio_clk, "socionext,ph1-ld20-mioctrl",
+	       ph1_pro5_mio_clk_init);
