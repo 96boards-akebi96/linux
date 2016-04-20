@@ -414,9 +414,23 @@ static int uniphier_conf_pin_drive_set(struct pinctrl_dev *pctldev,
 				  mask << shift, val << shift);
 }
 
-static int uniphier_conf_pin_input_enable(struct pinctrl_dev *pctldev,
-					  const struct pinctrl_pin_desc *pin,
-					  u16 enable)
+static int uniphier_conf_pin_input_enable_perpin(struct pinctrl_dev *pctldev,
+					const struct pinctrl_pin_desc *pin,
+					u16 enable)
+{
+	struct uniphier_pinctrl_priv *priv = pinctrl_dev_get_drvdata(pctldev);
+	unsigned pin_num = pin->number;
+	unsigned reg, mask;
+
+	reg = UNIPHIER_PINCTRL_IECTRL + pin_num / 32 * 4;
+	mask = BIT(pin_num % 32);
+
+	return regmap_update_bits(priv->regmap, reg, mask, mask);
+}
+
+static int uniphier_conf_pin_input_enable_legacy(struct pinctrl_dev *pctldev,
+					const struct pinctrl_pin_desc *pin,
+					u16 enable)
 {
 	struct uniphier_pinctrl_priv *priv = pinctrl_dev_get_drvdata(pctldev);
 	unsigned int iectrl = uniphier_pin_get_iectrl(pin->drv_data);
@@ -436,6 +450,20 @@ static int uniphier_conf_pin_input_enable(struct pinctrl_dev *pctldev,
 
 	return regmap_update_bits(priv->regmap, UNIPHIER_PINCTRL_IECTRL,
 				  BIT(iectrl), BIT(iectrl));
+}
+
+static int uniphier_conf_pin_input_enable(struct pinctrl_dev *pctldev,
+					  const struct pinctrl_pin_desc *pin,
+					  u16 enable)
+{
+	struct uniphier_pinctrl_priv *priv = pinctrl_dev_get_drvdata(pctldev);
+
+	if (priv->socdata->caps & UNIPHIER_PINCTRL_CAPS_PERPIN_IECTRL)
+		return uniphier_conf_pin_input_enable_perpin(pctldev, pin,
+							     enable);
+	else
+		return uniphier_conf_pin_input_enable_legacy(pctldev, pin,
+							     enable);
 }
 
 static int uniphier_conf_pin_config_set(struct pinctrl_dev *pctldev,
