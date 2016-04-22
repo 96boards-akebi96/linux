@@ -15,6 +15,16 @@ config USB_C67X00_HCD
 	  To compile this driver as a module, choose M here: the
 	  module will be called c67x00.
 
+#Uniphier USB WA begin  ----------------------------------------------------
+config USB_UNIPHIER_WA
+	bool "Uniphier USB workarounds"
+	depends on USB
+	default y
+	---help---
+	  If unsure, say N.
+
+#Uniphier USB WA end    ----------------------------------------------------
+
 config USB_XHCI_HCD
 	tristate "xHCI HCD (USB 3.0) support"
 	---help---
