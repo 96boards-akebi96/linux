@@ -387,7 +387,7 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 	const struct of_device_id *of_id;
 	void __iomem *base;
 	int ret;
-	int i, u3count, u2count;
+	int i;
 	char clkname[8];
 
 	of_id = of_match_device(of_dwc3_match, dev);
@@ -411,8 +411,6 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 	dwc3u->priv        = (struct dwc3_uniphier_priv_t *)of_id->data;
 
 	/* clk control */
-	u3count = 0;
-	u2count = 0;
 	for(i=0; i<UNIPHIER_USB_PORT_MAX; i++) {
 
 		/* usb3 clock */
@@ -425,9 +423,6 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 			dev_err(dwc3u->dev, "failed to get usb3 clock%d\n",i);
 			return PTR_ERR(dwc3u->u3clk[i]);
 		}
-		else {
-			u3count++;
-		}
 
 		/* usb2 clock */
 		sprintf(clkname, "u2clk%d", i);
@@ -439,13 +434,6 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 			dev_err(dwc3u->dev, "failed to get usb2 clock%d\n",i);
 			return PTR_ERR(dwc3u->u2clk[i]);
 		}
-		else {
-			u2count++;
-		}
-	}
-	if ((u2count == 0)&&(u3count == 0)) {
-		dev_err(dwc3u->dev, "failed to get usb clock\n");
-		return -ENOENT;
 	}
 
 	/* enable clk */
