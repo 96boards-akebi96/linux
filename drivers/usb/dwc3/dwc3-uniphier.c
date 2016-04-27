@@ -59,8 +59,11 @@ struct dwc3_uniphier_priv_t {
 	u32 host_cfg_bit_u2;		/* bit number for HOST_CONFIG0.NUM_U2 */
 	u32 host_cfg_bit_u3;		/* bit number for HOST_CONFIG0.NUM_U3 */
 
-	u32 testi_reg;			/* offset address for TESTI_REG */
-	u32 testo_reg;			/* offset address for TESTO_REG */
+	u32 u3phy_testi_reg;		/* offset address for TESTI_REG */
+	u32 u3phy_testo_reg;		/* offset address for TESTO_REG */
+
+	u32 u2phy_cfg0_reg;		/* offset address for P_U2PHY_CFG0 */
+	u32 u2phy_cfg1_reg;		/* offset address for P_U2PHY_CFG1 */
 };
 
 #define NO_USE ((u32)~0)
@@ -89,8 +92,10 @@ static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_pxs2 = {
 	.host_cfg_reg     = 0x400,
 	.host_cfg_bit_u2  = 8,
 	.host_cfg_bit_u3  = 11,
-	.testi_reg        = 0x300,
-	.testo_reg        = 0x304,
+	.u3phy_testi_reg  = 0x300,
+	.u3phy_testo_reg  = 0x304,
+	.u2phy_cfg0_reg   = NO_USE,
+	.u2phy_cfg1_reg   = NO_USE,
 };
 
 static inline void pphy_test_io(void __iomem *vptr_i, void __iomem *vptr_o,
@@ -161,8 +166,8 @@ static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *dwc3u)
 	/* set up SS-PHY */
 	ss_instances = (readl(dwc3u->base + priv->host_cfg_reg) >> priv->host_cfg_bit_u3) & NUM_U_MASK;
 	for(i=0; i < ss_instances; i++) {
-		vptr_i = dwc3u->base + priv->testi_reg + (i * 0x10);
-		vptr_o = dwc3u->base + priv->testo_reg + (i * 0x10);
+		vptr_i = dwc3u->base + priv->u3phy_testi_reg + (i * 0x10);
+		vptr_o = dwc3u->base + priv->u3phy_testo_reg + (i * 0x10);
 
 		pphy_test_io(vptr_i, vptr_o,  7, 0xf, 0xa);
 		pphy_test_io(vptr_i, vptr_o,  8, 0xf, 0x3);
@@ -219,8 +224,10 @@ static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_pro5 = {
 	.host_cfg_reg     = 0x400,
 	.host_cfg_bit_u2  = 8,
 	.host_cfg_bit_u3  = 11,
-	.testi_reg        = NO_USE,
-	.testo_reg        = NO_USE,
+	.u3phy_testi_reg  = NO_USE,
+	.u3phy_testo_reg  = NO_USE,
+	.u2phy_cfg0_reg   = NO_USE,
+	.u2phy_cfg1_reg   = NO_USE,
 };
 
 #define XHCI_HSPHY_PARAM2_REG		(0x288)
@@ -295,8 +302,10 @@ static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_pro4 = {
 	.host_cfg_reg     = NO_USE,
 	.host_cfg_bit_u2  = NO_USE,
 	.host_cfg_bit_u3  = NO_USE,
-	.testi_reg        = 0x010,
-	.testo_reg        = 0x014,
+	.u3phy_testi_reg  = 0x010,
+	.u3phy_testo_reg  = 0x014,
+	.u2phy_cfg0_reg   = NO_USE,
+	.u2phy_cfg1_reg   = NO_USE,
 };
 
 static inline void pphy_test_io_pro4(void __iomem *vptr_i, void __iomem *vptr_o, u32 data0)
@@ -334,8 +343,8 @@ static void dwc3_uniphier_init_pro4(struct dwc3_uniphier *dwc3u)
 	}
 
 	/* set up SS-PHY */
-	vptr_i = dwc3u->base + priv->testi_reg;
-	vptr_o = dwc3u->base + priv->testo_reg;
+	vptr_i = dwc3u->base + priv->u3phy_testi_reg;
+	vptr_o = dwc3u->base + priv->u3phy_testo_reg;
 
 	pphy_test_io_pro4(vptr_i, vptr_o, 0x206);
 	pphy_test_io_pro4(vptr_i, vptr_o, 0x08e);
