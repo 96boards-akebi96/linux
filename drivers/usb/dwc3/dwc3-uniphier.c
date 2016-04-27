@@ -23,6 +23,7 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 
@@ -39,6 +40,7 @@ struct dwc3_uniphier {
 	struct clk		*u3clk[UNIPHIER_USB_PORT_MAX];
 	struct clk		*u2clk[UNIPHIER_USB_PORT_MAX];
 	bool			vbus_supply;
+	u32			num_vbus;
 	struct dwc3_uniphier_priv_t	*priv;
 };
 
@@ -385,6 +387,209 @@ static void dwc3_uniphier_exit_pro4(struct dwc3_uniphier *dwc3u)
 	return;
 }
 
+/* for LD20 */
+
+static void dwc3_uniphier_init_ld20(struct dwc3_uniphier *);
+static void dwc3_uniphier_exit_ld20(struct dwc3_uniphier *);
+
+static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_ld20 = {
+	.init = dwc3_uniphier_init_ld20,
+	.exit = dwc3_uniphier_exit_ld20,
+	.reset_reg        = 0x000,
+	.reset_bit_link   = 15,
+	.reset_bit_iommu  = NO_USE,
+	.vbus_reg         = 0x100,
+	.vbus_bit_en      = 3,
+	.vbus_bit_onoff   = 4,
+	.host_cfg_reg     = 0x400,
+	.host_cfg_bit_u2  = 8,
+	.host_cfg_bit_u3  = 11,
+	.u3phy_testi_reg  = 0x300,
+	.u3phy_testo_reg  = 0x304,
+	.u2phy_cfg0_reg   = 0x200,
+	.u2phy_cfg1_reg   = 0x204,
+};
+
+#define EFUSE_BASE		0x5f900000
+#define EFUSE_SIZE		0x0300
+#define EFUSE_MON27_REG		0x0254
+#define EFUSE_MON28_REG		0x0258
+#define RSTCTL_REG		0x200C
+
+static void ss_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int ss_instances)
+{
+	/* No setup needed */
+	return;
+}
+
+static void hs_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int hs_instances)
+{
+	int i;
+
+	void __iomem *efuse_addr;
+	u32 efuse0, efuse1;
+	u32 efuse_rterm_trim;
+	u32 efuse_rtim_sel_t;
+	u32 efuse_hs_i_trim;
+
+	void __iomem *hs_phy_addr;
+	u32 hs_phy_cfgl, hs_phy_cfgh;
+
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
+	/* read the customized phy parameter from efuse */
+	efuse_addr = ioremap_nocache(EFUSE_BASE, EFUSE_SIZE);
+	efuse0 = readl(efuse_addr + EFUSE_MON27_REG);
+	efuse1 = readl(efuse_addr + EFUSE_MON28_REG);
+	iounmap(efuse_addr);
+
+	for (i=0; i < hs_instances; i++) {
+		/* set the default recommended value */
+		hs_phy_cfgl = 0x92306680;
+		hs_phy_cfgh = 0x00000106;
+
+		/* override by the value from efuse, if exist */
+		if ((efuse0 | efuse1) != 0) {
+			switch (i) {
+			case 0:
+				/* efuse0[5:4],[3:0],[19:16] */
+				efuse_rterm_trim = (efuse0 & 0x00000030) >> 4;
+				efuse_rtim_sel_t = (efuse0 & 0x0000000f);
+				efuse_hs_i_trim  = (efuse0 & 0x000f0000) >> 16;
+				break;
+			case 1:
+				/* efuse0[13:12],[11:8],[19:16] */
+				efuse_rterm_trim = (efuse0 & 0x00003000) >> 12;
+				efuse_rtim_sel_t = (efuse0 & 0x00000f00) >> 8;
+				efuse_hs_i_trim  = (efuse0 & 0x000f0000) >> 16;
+				break;
+			case 2:
+				/* efuse1[5:4],[3:0],[19:16] */
+				efuse_rterm_trim = (efuse1 & 0x00000030) >> 4;
+				efuse_rtim_sel_t = (efuse1 & 0x0000000f);
+				efuse_hs_i_trim  = (efuse1 & 0x000f0000) >> 16;
+				break;
+			case 3:
+				/* efuse1[13:12],[11:8],[19:16] */
+				efuse_rterm_trim = (efuse1 & 0x00003000) >> 12;
+				efuse_rtim_sel_t = (efuse1 & 0x00000f00) >>  8;
+				efuse_hs_i_trim  = (efuse1 & 0x000f0000) >> 16;
+				break;
+			default:
+				efuse_rterm_trim = 0;
+				efuse_rtim_sel_t = 0;
+				efuse_hs_i_trim  = 0;
+				dev_err(dwc3u->dev,
+					"illegal HS instances (%d)\n", i);
+			}
+
+			/* clear [31:28][15:12][7:6] and override them */
+			hs_phy_cfgl = hs_phy_cfgl & 0x0fff0f3f;
+			hs_phy_cfgl = hs_phy_cfgl
+					| (efuse_rterm_trim << 6)
+					| (efuse_rtim_sel_t << 12)
+					| (efuse_hs_i_trim << 28);
+		}
+
+		/* write to the registers for the i-th HS instance */
+		hs_phy_addr = dwc3u->base + priv->u2phy_cfg0_reg + (i * 0x10);
+		writel(hs_phy_cfgl, hs_phy_addr);
+		hs_phy_addr = dwc3u->base + priv->u2phy_cfg1_reg + (i * 0x10);
+		writel(hs_phy_cfgh, hs_phy_addr);
+	}
+
+	return;
+}
+
+static void dwc3_uniphier_init_ld20(struct dwc3_uniphier *dwc3u)
+{
+	int i;
+
+	struct device_node *clk_node;
+	void __iomem *vptr;
+	u32 rstctl_mask;
+
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+	int hs_instances;
+	int ss_instances;
+
+	/* get the number of HS/SS port from the HW default value */
+	hs_instances = (readl(dwc3u->base + priv->host_cfg_reg) >> priv->host_cfg_bit_u2) & NUM_U_MASK;
+	ss_instances = (readl(dwc3u->base + priv->host_cfg_reg) >> priv->host_cfg_bit_u3) & NUM_U_MASK;
+
+	/* number of VBUS */
+	dwc3u->num_vbus = hs_instances;
+
+	/* 2nd reset by SoC RSTCTL (do after reference clcck beocmes stable) */
+	clk_node = of_parse_phandle(dwc3u->dev->of_node, "clocks", 0);
+	if (clk_node) {
+		vptr = of_iomap(clk_node, 0);
+		if (vptr) {
+			rstctl_mask = 0x0000f020;
+			maskwritel(vptr, RSTCTL_REG,		/* issue the reset */
+				   rstctl_mask, 0);
+			msleep(1);
+			maskwritel(vptr, RSTCTL_REG,		/* end the reset */
+				   rstctl_mask, rstctl_mask);
+			iounmap(vptr);
+		} else {
+			dev_warn(dwc3u->dev, "Failed to map clock register\n");
+		}
+		of_node_put(clk_node);
+	} else {
+		dev_warn(dwc3u->dev, "Failed to get clock select node\n");
+	}
+
+	/* control the VBUS */
+	if (dwc3u->vbus_supply){
+		for(i=0; i < dwc3u->num_vbus; i++) {
+			/* enable the control and turn-on the VBUS */
+			maskwritel(dwc3u->base, priv->vbus_reg + (i * 0x10),
+				   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
+				   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff));
+		}
+	}
+
+	/* set up SS-PHY */
+	ss_phy_setup_ld20(dwc3u, ss_instances);
+
+	/* set up HS-PHY */
+	hs_phy_setup_ld20(dwc3u, hs_instances);
+
+	/* release reset by XHCI LINK RESET */
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link),
+		   0);
+	msleep(1);
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link),
+		   (1 << priv->reset_bit_link));
+
+	return;
+}
+
+static void dwc3_uniphier_exit_ld20(struct dwc3_uniphier *dwc3u)
+{
+	int i;
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
+	/* reset */
+	maskwritel(dwc3u->base, priv->reset_reg,
+		   (1 << priv->reset_bit_link), 0);
+
+	/* control the VBUS */
+	if (dwc3u->vbus_supply){
+		for(i=0; i < dwc3u->num_vbus; i++) {
+			/* disable the control */
+			maskwritel(dwc3u->base, priv->vbus_reg + (i * 0x10),
+				   (1 << priv->vbus_bit_en), 0);
+		}
+	}
+
+	return;
+}
+
+
 static const struct of_device_id of_dwc3_match[];
 
 static int dwc3_uniphier_probe(struct platform_device *pdev)
@@ -529,6 +734,10 @@ static const struct of_device_id of_dwc3_match[] = {
 	{
 		.compatible = "socionext,ph1-pro4-dwc3",
 		.data       = (void *)&dwc3_uniphier_priv_data_pro4,
+	},
+	{
+		.compatible = "socionext,ph1-ld20-dwc3",
+		.data       = (void *)&dwc3_uniphier_priv_data_ld20,
 	},
 	{ /* Sentinel */ }
 };
