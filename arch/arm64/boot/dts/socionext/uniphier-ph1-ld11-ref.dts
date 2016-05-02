@@ -63,7 +63,7 @@
 	aliases {
 		serial0 = &serial0;
 		serial1 = &serial1;
-		serial2 = &serial2;
+		serial2 = &serialsc;
 		serial3 = &serial3;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
@@ -75,6 +75,10 @@
 };
 
 &ethsc {
+	interrupts = <0 48 4>;
+};
+
+&serialsc {
 	interrupts = <0 48 4>;
 };
 
