@@ -123,7 +123,7 @@
 			interrupts = <0 33 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart0>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 0>;
 		};
 
 		serial1: serial@54006900 {
@@ -133,7 +133,7 @@
 			interrupts = <0 35 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart1>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 1>;
 		};
 
 		serial2: serial@54006a00 {
@@ -143,7 +143,7 @@
 			interrupts = <0 37 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart2>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 2>;
 		};
 
 		serial3: serial@54006b00 {
@@ -153,7 +153,7 @@
 			interrupts = <0 177 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart3>;
-			clocks = <&uart_clk>;
+			clocks = <&peri 3>;
 		};
 
 		i2c0: i2c@58780000 {
@@ -165,7 +165,7 @@
 			interrupts = <0 41 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_i2c0>;
-			clocks = <&i2c_clk>;
+			clocks = <&peri 4>;
 			clock-frequency = <100000>;
 		};
 
@@ -178,7 +178,7 @@
 			interrupts = <0 42 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_i2c1>;
-			clocks = <&i2c_clk>;
+			clocks = <&peri 5>;
 			clock-frequency = <100000>;
 		};
 
@@ -188,7 +188,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 43 4>;
-			clocks = <&i2c_clk>;
+			clocks = <&peri 6>;
 			clock-frequency = <400000>;
 		};
 
@@ -201,7 +201,7 @@
 			interrupts = <0 44 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_i2c3>;
-			clocks = <&i2c_clk>;
+			clocks = <&peri 7>;
 			clock-frequency = <100000>;
 		};
 
@@ -214,7 +214,7 @@
 			interrupts = <0 45 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_i2c4>;
-			clocks = <&i2c_clk>;
+			clocks = <&peri 8>;
 			clock-frequency = <100000>;
 		};
 
@@ -224,7 +224,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <0 25 4>;
-			clocks = <&i2c_clk>;
+			clocks = <&peri 9>;
 			clock-frequency = <400000>;
 		};
 
@@ -241,8 +241,22 @@
 			reg = <0x59801000 0x400>;
 		};
 
+		mio: mioctrl@59810000 {
+			compatible = "socionext,ph1-ld20-mioctrl";
+			reg = <0x59810000 0x800>;
+			#clock-cells = <1>;
+		};
+
+		peri: perictrl@59820000 {
+			compatible = "socionext,ph1-ld20-perictrl";
+			reg = <0x59820000 0x200>;
+			#clock-cells = <1>;
+			clock-names = "uart", "fi2c";
+			clocks = <&sysctrl 3>, <&sysctrl 4>;
+		};
+
 		pinctrl: pinctrl@5f801000 {
-			compatible = "socionext,ph1-ld11-pinctrl", "syscon";
+			compatible = "socionext,ph1-ld20-pinctrl", "syscon";
 			reg = <0x5f801000 0xe00>;
 		};
 
@@ -253,6 +267,14 @@
 			interrupt-controller;
 			#interrupt-cells = <3>;
 			interrupts = <1 9 4>;
+		};
+
+		sysctrl: sysctrl@61840000 {
+			compatible = "socionext,ph1-ld20-sysctrl";
+			reg = <0x61840000 0x4000>;
+			#clock-cells = <1>;
+			clock-names = "ref";
+			clocks = <&refclk>;
 		};
 	};
 };
