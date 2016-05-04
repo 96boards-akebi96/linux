@@ -241,12 +241,6 @@
 			reg = <0x59801000 0x400>;
 		};
 
-		mio: mioctrl@59810000 {
-			compatible = "socionext,ph1-ld20-mioctrl";
-			reg = <0x59810000 0x800>;
-			#clock-cells = <1>;
-		};
-
 		peri: perictrl@59820000 {
 			compatible = "socionext,ph1-ld20-perictrl";
 			reg = <0x59820000 0x200>;
@@ -270,6 +264,42 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_emmc>;
 			};
+		};
+
+		usb0: usb@5a800100 {
+			compatible = "socionext,uniphier-ehci", "generic-ehci";
+			status = "disabled";
+			reg = <0x5a800100 0x100>;
+			interrupts = <0 243 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usb0>;
+			clocks = <&mio 4>, <&mio 8>;
+		};
+
+		usb1: usb@5a810100 {
+			compatible = "socionext,uniphier-ehci", "generic-ehci";
+			status = "disabled";
+			reg = <0x5a810100 0x100>;
+			interrupts = <0 244 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usb1>;
+			clocks = <&mio 5>, <&mio 8>;
+		};
+
+		usb2: usb@5a820100 {
+			compatible = "socionext,uniphier-ehci", "generic-ehci";
+			status = "disabled";
+			reg = <0x5a820100 0x100>;
+			interrupts = <0 245 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usb2>;
+			clocks = <&mio 6>, <&mio 8>;
+		};
+
+		mio: mioctrl@5b3e0000 {
+			compatible = "socionext,ph1-ld11-mioctrl";
+			reg = <0x5b3e0000 0x800>;
+			#clock-cells = <1>;
 		};
 
 		pinctrl: pinctrl@5f801000 {
