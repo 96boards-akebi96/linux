@@ -282,6 +282,14 @@ static struct uniphier_clk_init_data ph1_pro5_mio_clk_idata[] __initdata = {
 	{ /* sentinel */ }
 };
 
+static struct uniphier_clk_init_data ph1_ld11_mio_clk_idata[] __initdata = {
+	UNIPHIER_MIO_CLK_EHCI(0, 4),
+	UNIPHIER_MIO_CLK_EHCI(1, 5),
+	UNIPHIER_MIO_CLK_EHCI(2, 6),
+	UNIPHIER_MIO_CLK_DMAC(8),
+	{ /* sentinel */ }
+};
+
 static void __init ph1_sld3_mio_clk_init(struct device_node *np)
 {
 	uniphier_clk_init(np, ph1_sld3_mio_clk_idata);
@@ -315,3 +323,10 @@ CLK_OF_DECLARE(proxstream2_mio_clk, "socionext,proxstream2-mioctrl",
 	       ph1_pro5_mio_clk_init);
 CLK_OF_DECLARE(ph1_ld20_mio_clk, "socionext,ph1-ld20-mioctrl",
 	       ph1_pro5_mio_clk_init);
+
+static void __init ph1_ld11_mio_clk_init(struct device_node *np)
+{
+	uniphier_clk_init(np, ph1_ld11_mio_clk_idata);
+}
+CLK_OF_DECLARE(ph1_ld11_mio_clk, "socionext,ph1-ld11-mioctrl",
+	       ph1_ld11_mio_clk_init);
