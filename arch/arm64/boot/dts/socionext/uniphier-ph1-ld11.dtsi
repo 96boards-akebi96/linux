@@ -273,7 +273,7 @@
 		};
 
 		pinctrl: pinctrl@5f801000 {
-			compatible = "socionext,ph1-ld20-pinctrl", "syscon";
+			compatible = "socionext,ph1-ld11-pinctrl", "syscon";
 			reg = <0x5f801000 0xe00>;
 		};
 
