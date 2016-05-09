@@ -43,20 +43,17 @@ extern int kgdb_fault_expected;
  * General purpose regs:
  *     r0-r30: 64 bit
  *     sp,pc : 64 bit
- *     pstate  : 64 bit
- *     Total: 34
+ *     pstate  : 32 bit
+ *     Total: 33 + 1
  * FPU regs:
  *     f0-f31: 128 bit
- *     Total: 32
- * Extra regs
  *     fpsr & fpcr: 32 bit
- *     Total: 2
- *
+ *     Total: 32 + 2
  */
 
-#define _GP_REGS		34
+#define _GP_REGS		33
 #define _FP_REGS		32
-#define _EXTRA_REGS		2
+#define _EXTRA_REGS		3
 /*
  * general purpose registers size in bytes.
  * pstate is only 4 bytes. subtract 4 bytes

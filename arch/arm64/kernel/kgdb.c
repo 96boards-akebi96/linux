@@ -58,7 +58,11 @@ struct dbg_reg_def_t dbg_reg_def[DBG_MAX_REG_NUM] = {
 	{ "x30", 8, offsetof(struct pt_regs, regs[30])},
 	{ "sp", 8, offsetof(struct pt_regs, sp)},
 	{ "pc", 8, offsetof(struct pt_regs, pc)},
-	{ "pstate", 8, offsetof(struct pt_regs, pstate)},
+	{ "pstate", 4, offsetof(struct pt_regs, pstate)
+#ifdef CONFIG_CPU_BIG_ENDIAN
+							+ 4
+#endif
+	},
 	{ "v0", 16, -1 },
 	{ "v1", 16, -1 },
 	{ "v2", 16, -1 },
@@ -128,6 +132,7 @@ sleeping_thread_to_gdb_regs(unsigned long *gdb_regs, struct task_struct *task)
 	memset((char *)gdb_regs, 0, NUMREGBYTES);
 	thread_regs = task_pt_regs(task);
 	memcpy((void *)gdb_regs, (void *)thread_regs->regs, GP_REG_BYTES);
+	dbg_get_reg(33, gdb_regs + GP_REG_BYTES, thread_regs);
 }
 
 void kgdb_arch_set_pc(struct pt_regs *regs, unsigned long pc)
