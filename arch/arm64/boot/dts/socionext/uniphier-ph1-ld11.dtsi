@@ -414,6 +414,9 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_usb0>;
 			clocks = <&mio 4>, <&mio 8>;
+			phys = <&usbphy>;
+			phy-names = "usb";
+			has-transaction-translator;
 		};
 
 		usb1: usb@5a810100 {
@@ -424,6 +427,9 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_usb1>;
 			clocks = <&mio 5>, <&mio 8>;
+			phys = <&usbphy>;
+			phy-names = "usb";
+			has-transaction-translator;
 		};
 
 		usb2: usb@5a820100 {
@@ -434,6 +440,15 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_usb2>;
 			clocks = <&mio 6>, <&mio 8>;
+			phys = <&usbphy>;
+			phy-names = "usb";
+			has-transaction-translator;
+		};
+
+		usbphy: usbphy@5f800500 {
+			#phy-cells = <0>;
+			compatible = "socionext,ph1-ld11-usbphy";
+			reg = <0x5f800500 0x20>;
 		};
 
 		mio: mioctrl@5b3e0000 {
