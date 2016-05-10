@@ -489,6 +489,9 @@ static void hs_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int hs_instances)
 					| (efuse_rterm_trim << 6)
 					| (efuse_rtim_sel_t << 12)
 					| (efuse_hs_i_trim << 28);
+		} else {
+			/* change [27:26] 0x0->0x3 */
+			hs_phy_cfgl = hs_phy_cfgl | (0x3 << 26);
 		}
 
 		/* write to the registers for the i-th HS instance */
