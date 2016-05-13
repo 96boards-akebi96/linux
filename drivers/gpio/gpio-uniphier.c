@@ -126,14 +126,7 @@ static int uniphier_gpio_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct uniphier_gpio_priv *priv;
-	u32 ngpio;
 	int ret;
-
-	ret = of_property_read_u32(dev->of_node, "ngpio", &ngpio);
-	if (ret) {
-		dev_err(dev, "failed to get ngpio property\n");
-		return ret;
-	}
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -151,7 +144,7 @@ static int uniphier_gpio_probe(struct platform_device *pdev)
 	priv->mmchip.gc.get = uniphier_gpio_get;
 	priv->mmchip.gc.set = uniphier_gpio_set;
 	//priv->mmchip.gc.set_multiple = uniphier_gpio_set_multiple;
-	priv->mmchip.gc.ngpio = ngpio;
+	priv->mmchip.gc.ngpio = UNIPHIER_GPIO_PORTS_PER_BANK;
 
 	ret = of_mm_gpiochip_add(dev->of_node, &priv->mmchip);
 	if (ret) {
