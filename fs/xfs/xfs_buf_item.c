@@ -1086,6 +1086,9 @@ xfs_buf_iodone_callback_error(
 		bp->b_flags |= (XBF_WRITE | XBF_ASYNC |
 			        XBF_DONE | XBF_WRITE_FAIL);
 		bp->b_last_error = bp->b_error;
+		bp->b_retries = 0;
+		bp->b_first_retry_time = jiffies;
+
 		xfs_buf_ioerror(bp, 0);
 		xfs_buf_submit(bp);
 		return true;
@@ -1096,8 +1099,13 @@ xfs_buf_iodone_callback_error(
 	 * error configuration we have been set up to use.
 	 */
 	cfg = xfs_error_get_cfg(mp, XFS_ERR_METADATA, bp->b_error);
-	if (!cfg->max_retries)
-		goto permanent_error;
+
+	if (cfg->max_retries != XFS_ERR_RETRY_FOREVER &&
+	    ++bp->b_retries > cfg->max_retries)
+			goto permanent_error;
+	if (cfg->retry_timeout &&
+	    time_after(jiffies, cfg->retry_timeout + bp->b_first_retry_time))
+			goto permanent_error;
 
 	/* still a transient error, higher layers will retry */
 	xfs_buf_ioerror(bp, 0);
@@ -1140,6 +1148,7 @@ xfs_buf_iodone_callbacks(
 	 * retry state here in preparation for the next error that may occur.
 	 */
 	bp->b_last_error = 0;
+	bp->b_retries = 0;
 
 	xfs_buf_do_callbacks(bp);
 	bp->b_fspriv = NULL;
