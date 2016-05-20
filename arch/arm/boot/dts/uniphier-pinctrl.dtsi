@@ -142,4 +142,9 @@
 		groups = "usb3";
 		function = "usb3";
 	};
+
+	pinctrl_aout: aout_grp {
+		groups = "aout";
+		function = "aout";
+	};
 };
