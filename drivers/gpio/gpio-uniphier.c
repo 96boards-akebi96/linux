@@ -44,9 +44,9 @@ static void uniphier_gpio_offset_write(struct gpio_chip *chip, unsigned offset,
 	spin_lock_irqsave(&priv->lock, flags);
 	tmp = readl(mmchip->regs + reg);
 	if (value)
-		tmp &= ~mask;
-	else
 		tmp |= mask;
+	else
+		tmp &= ~mask;
 	writel(tmp, mmchip->regs + reg);
 	spin_unlock_irqrestore(&priv->lock, flags);
 }
@@ -71,7 +71,7 @@ static void uniphier_gpio_free(struct gpio_chip *chip, unsigned offset)
 
 static int uniphier_gpio_get_direction(struct gpio_chip *chip, unsigned offset)
 {
-	return uniphier_gpio_offset_read(chip, UNIPHIER_GPIO_REG_DIR, offset) ?
+	return uniphier_gpio_offset_read(chip, offset, UNIPHIER_GPIO_REG_DIR) ?
 						GPIOF_DIR_IN : GPIOF_DIR_OUT;
 }
 
