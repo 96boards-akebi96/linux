@@ -586,6 +586,8 @@ static const unsigned usb2_pins[] = {50, 51};
 static const unsigned usb2_muxvals[] = {0, 0};
 static const unsigned usb3_pins[] = {52, 53};
 static const unsigned usb3_muxvals[] = {0, 0};
+static const unsigned aout_pins[] = {135, 136, 137, 138, 139, 140, 141, 142};
+static const unsigned aout_muxvals[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 static const struct uniphier_pinctrl_group uniphier_ld11_groups[] = {
 	UNIPHIER_PINCTRL_GROUP(emmc),
@@ -604,6 +606,7 @@ static const struct uniphier_pinctrl_group uniphier_ld11_groups[] = {
 	UNIPHIER_PINCTRL_GROUP(usb1),
 	UNIPHIER_PINCTRL_GROUP(usb2),
 	UNIPHIER_PINCTRL_GROUP(usb3),
+	UNIPHIER_PINCTRL_GROUP(aout),
 };
 
 static const char * const emmc_groups[] = {"emmc", "emmc_dat8"};
@@ -621,6 +624,7 @@ static const char * const usb0_groups[] = {"usb0"};
 static const char * const usb1_groups[] = {"usb1"};
 static const char * const usb2_groups[] = {"usb2"};
 static const char * const usb3_groups[] = {"usb3"};
+static const char * const aout_groups[] = {"aout"};
 
 static const struct uniphier_pinmux_function uniphier_ld11_functions[] = {
 	UNIPHIER_PINMUX_FUNCTION(emmc),
@@ -638,6 +642,7 @@ static const struct uniphier_pinmux_function uniphier_ld11_functions[] = {
 	UNIPHIER_PINMUX_FUNCTION(usb1),
 	UNIPHIER_PINMUX_FUNCTION(usb2),
 	UNIPHIER_PINMUX_FUNCTION(usb3),
+	UNIPHIER_PINMUX_FUNCTION(aout),
 };
 
 static struct uniphier_pinctrl_socdata uniphier_ld11_pindata = {
