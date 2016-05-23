@@ -478,6 +478,11 @@
 			clock-names = "ref";
 			clocks = <&refclk>;
 		};
+
+		watchdog@61843000 {
+			compatible = "socionext,uniphier-wdt";
+			reg = <0x61843000 0x1000>;
+		};
 	};
 };
 
