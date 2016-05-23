@@ -913,6 +913,14 @@ static const char * const port_groups[] = {
 	"port250", "port251", "port252", "port253",
 	"port254", /* port255-257 missing */
 };
+static const char * const xirq_groups[] = {
+	"xirq0",  "xirq1",  "xirq2",  "xirq3",
+	"xirq4",  "xirq5",  "xirq6",  "xirq7",
+	"xirq8",  "xirq9",  "xirq10", "xirq11",
+	"xirq12", "xirq13", "xirq14", "xirq15",
+	"xirq16", "xirq17", "xirq18", "xirq19",
+	"xirq20",
+};
 
 static const struct uniphier_pinmux_function uniphier_ld20_functions[] = {
 	UNIPHIER_PINMUX_FUNCTION(emmc),
