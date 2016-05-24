@@ -490,6 +490,13 @@
 			compatible = "socionext,uniphier-wdt";
 			reg = <0x61843000 0x1000>;
 		};
+
+		pvtctl: pvtctl@6184e000 {
+			compatible = "socionext,ph1-ld20-thermal";
+			reg = <0x6184e000 0x1000>;
+			interrupts = <0 3 1>;
+			#thermal-sensor-cells = <0>;
+		};
 	};
 };
 
