@@ -551,6 +551,8 @@ static const struct pinctrl_pin_desc uniphier_ld20_pins[] = {
 			     175, UNIPHIER_PIN_PULL_DOWN),
 };
 
+static const unsigned aout_pins[] = {135, 136, 137, 138, 139, 140, 141, 142};
+static const int aout_muxvals[] = {0, 0, 0, 0, 0, 0, 0, 0};
 static const unsigned emmc_pins[] = {18, 19, 20, 21, 22, 23, 24, 25};
 static const int emmc_muxvals[] = {0, 0, 0, 0, 0, 0, 0, 0};
 static const unsigned emmc_dat8_pins[] = {26, 27, 28, 29};
@@ -668,6 +670,7 @@ static const int xirq_alternatives_muxvals[] = {
 };
 
 static const struct uniphier_pinctrl_group uniphier_ld20_groups[] = {
+	UNIPHIER_PINCTRL_GROUP(aout),
 	UNIPHIER_PINCTRL_GROUP(emmc),
 	UNIPHIER_PINCTRL_GROUP(emmc_dat8),
 	UNIPHIER_PINCTRL_GROUP(i2c0),
@@ -902,6 +905,7 @@ static const struct uniphier_pinctrl_group uniphier_ld20_groups[] = {
 	UNIPHIER_PINCTRL_GROUP_SINGLE(xirq23b, xirq_alternatives, 21),
 };
 
+static const char * const aout_groups[] = {"aout"};
 static const char * const emmc_groups[] = {"emmc", "emmc_dat8"};
 static const char * const i2c0_groups[] = {"i2c0"};
 static const char * const i2c1_groups[] = {"i2c1"};
@@ -982,6 +986,7 @@ static const char * const xirq_groups[] = {
 };
 
 static const struct uniphier_pinmux_function uniphier_ld20_functions[] = {
+	UNIPHIER_PINMUX_FUNCTION(aout),
 	UNIPHIER_PINMUX_FUNCTION(emmc),
 	UNIPHIER_PINMUX_FUNCTION(i2c0),
 	UNIPHIER_PINMUX_FUNCTION(i2c1),
