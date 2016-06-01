@@ -509,7 +509,7 @@
 };
 
 &pinctrl {
-	compatible = "socionext,ph1-pro4-pinctrl", "syscon";
+	compatible = "socionext,uniphier-pro4-pinctrl";
 };
 
 &sysctrl {
