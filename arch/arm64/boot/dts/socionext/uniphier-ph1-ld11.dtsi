@@ -42,7 +42,7 @@
  *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/memreserve/ 0x80000100 0x00000008;
+/memreserve/ 0x80000000 0x00000008;
 
 / {
 	compatible = "socionext,ph1-ld11";
@@ -70,7 +70,7 @@
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0 0x000>;
 			enable-method = "spin-table";
-			cpu-release-addr = <0 0x80000100>;
+			cpu-release-addr = <0 0x80000000>;
 		};
 
 		cpu1: cpu@1 {
@@ -78,7 +78,7 @@
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0 0x001>;
 			enable-method = "spin-table";
-			cpu-release-addr = <0 0x80000100>;
+			cpu-release-addr = <0 0x80000000>;
 		};
 	};
 
