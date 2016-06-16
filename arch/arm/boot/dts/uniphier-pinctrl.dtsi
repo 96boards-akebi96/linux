@@ -83,6 +83,11 @@
 		function = "nand";
 	};
 
+	pinctrl_nand2cs: nand2cs_grp {
+		groups = "nand", "nand_cs1";
+		function = "nand";
+	};
+
 	pinctrl_sd: sd_grp {
 		groups = "sd";
 		function = "sd";
