@@ -48,6 +48,21 @@
 		function = "emmc";
 	};
 
+	pinctrl_ether_mii: ether_mii {
+		groups = "ether_mii";
+		function = "ether_mii";
+	};
+
+	pinctrl_ether_rgmii: ether_rgmii {
+		groups = "ether_rgmii";
+		function = "ether_rgmii";
+	};
+
+	pinctrl_ether_rmii: ether_rmii {
+		groups = "ether_rmii";
+		function = "ether_rmii";
+	};
+
 	pinctrl_emmc_1v8: emmc_grp_1v8 {
 		groups = "emmc", "emmc_dat8";
 		function = "emmc";
