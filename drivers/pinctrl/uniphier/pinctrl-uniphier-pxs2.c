@@ -738,9 +738,9 @@ static const int ether_mii_muxvals[] = {8, 8, 8, 8, 12, 12, 12, 12, 12, 12, 12,
 					12, 12, 12, 12, 12, 12, 12, 12, 12};
 static const unsigned ether_rgmii_pins[] = {143, 144, 145, 146, 147, 148, 149,
 					    150, 151, 152, 153, 154, 155, 156,
-					    158};
+					    157, 158};
 static const int ether_rgmii_muxvals[] = {8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-					  8, 8, 8};
+					  8, 8, 8, 8};
 static const unsigned ether_rmii_pins[] = {143, 144, 145, 146, 147, 148, 149,
 					   150, 152, 154, 155, 158};
 static const int ether_rmii_muxvals[] = {8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9};
