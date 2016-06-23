@@ -47,6 +47,8 @@
 			enable-method = "psci";
 			operating-points-v2 = <&cluster0_opp>;
 			#cooling-cells = <2>;
+			sched-energy-costs = <&cpu0_cost &cluster0_cost
+					      &system_cost>;
 		};
 
 		cpu1: cpu@1 {
@@ -57,6 +59,8 @@
 			enable-method = "psci";
 			operating-points-v2 = <&cluster0_opp>;
 			#cooling-cells = <2>;
+			sched-energy-costs = <&cpu0_cost &cluster0_cost
+					      &system_cost>;
 		};
 
 		cpu2: cpu@100 {
@@ -67,6 +71,8 @@
 			enable-method = "psci";
 			operating-points-v2 = <&cluster1_opp>;
 			#cooling-cells = <2>;
+			sched-energy-costs = <&cpu1_cost &cluster1_cost
+					      &system_cost>;
 		};
 
 		cpu3: cpu@101 {
@@ -77,6 +83,8 @@
 			enable-method = "psci";
 			operating-points-v2 = <&cluster1_opp>;
 			#cooling-cells = <2>;
+			sched-energy-costs = <&cpu1_cost &cluster1_cost
+					      &system_cost>;
 		};
 	};
 
@@ -153,6 +161,70 @@
 		opp-1100000000 {
 			opp-hz = /bits/ 64 <1100000000>;
 			clock-latency-ns = <300>;
+		};
+	};
+
+	energy-costs {
+		cpu0_cost: core-cost0 {
+			busy-cost-data = <
+				417	168
+				579	251
+				744	359
+				883	479
+				1024	616
+			>;
+			idle-cost-data = <
+				15
+				0
+			>;
+		};
+		cpu1_cost: core-cost1 {
+			busy-cost-data = <
+				235	33
+				302	46
+				368	61
+				406	76
+				447	93
+			>;
+			idle-cost-data = <
+				6
+				0
+			>;
+		};
+		cluster0_cost: cluster-cost0 {
+			busy-cost-data = <
+				417	22
+				579	32
+				744	43
+				883	53
+				1024	64
+			>;
+			idle-cost-data = <
+				65
+				24
+			>;
+		};
+		cluster1_cost: cluster-cost1 {
+			busy-cost-data = <
+				235	22
+				303	30
+				368	39
+				406	47
+				447	57
+			>;
+			idle-cost-data = <
+				56
+				17
+			>;
+		};
+		system_cost: system-cost0 {
+			busy-cost-data = <
+				1024	0
+			>;
+			idle-cost-data = <
+				0
+				0
+			>;
 		};
 	};
 
