@@ -734,8 +734,8 @@ static const int emmc_dat8_muxvals[] = {9, 9, 9, 9};
 static const unsigned ether_mii_pins[] = {143, 144, 145, 146, 147, 148, 149,
 					  150, 151, 152, 153, 154, 155, 156,
 					  158, 159, 199, 200, 201, 202};
-static const int ether_mii_muxvals[] = {8, 8, 8, 8, 12, 12, 12, 12, 12, 12, 12,
-					12, 12, 12, 12, 12, 12, 12, 12, 12};
+static const int ether_mii_muxvals[] = {8, 8, 8, 8, 10, 10, 10, 10, 10, 10, 10,
+					10, 10, 10, 10, 10, 12, 12, 12, 12};
 static const unsigned ether_rgmii_pins[] = {143, 144, 145, 146, 147, 148, 149,
 					    150, 151, 152, 153, 154, 155, 156,
 					    157, 158};
