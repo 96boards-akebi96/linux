@@ -1678,6 +1678,13 @@ struct xhci_hcd {
 	/* Compliance Mode Recovery Data */
 	struct timer_list	comp_mode_recovery_timer;
 	u32			port_status_u0;
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
+	/* VBUS CONTROL register base address */
+	u32 __iomem		*vbus_regs;
+#define XHCI_USB3_VBUS_CONTROL_BASE	(0x65b00100)	/* USB3 VBUS BASE ADDRESS (LD20) */
+#define XHCI_USB3_VBUS_CONTROL_SIZE	(0x0100)	/* USB3 VBUS REGISTER SIZE */
+#define XHCI_USB3_VBUS_DRVVBUS_REG	(1<<4)		/* VBUS ON */
+#endif
 /* Compliance Mode Timer Triggered every 2 seconds */
 #define COMP_MODE_RCVRY_MSECS 2000
 };

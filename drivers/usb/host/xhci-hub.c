@@ -1096,6 +1096,13 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			 */
 			writel(temp | PORT_POWER, port_array[wIndex]);
 
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
+			/* wIndex : 0, 1, .. , max_ports-1 */
+			temp = readl((void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+			temp |= XHCI_USB3_VBUS_DRVVBUS_REG;
+			writel(temp, (void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+#endif
+
 			temp = readl(port_array[wIndex]);
 			xhci_dbg(xhci, "set port power, actual port %d status  = 0x%x\n", wIndex, temp);
 
@@ -1221,6 +1228,13 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			break;
 		case USB_PORT_FEAT_POWER:
 			writel(temp & ~PORT_POWER, port_array[wIndex]);
+
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
+			/* wIndex : 0, 1, .. , max_ports-1 */
+			temp = readl((void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+			temp &= ~XHCI_USB3_VBUS_DRVVBUS_REG;
+			writel(temp, (void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+#endif
 
 			spin_unlock_irqrestore(&xhci->lock, flags);
 			temp = usb_acpi_power_manageable(hcd->self.root_hub,

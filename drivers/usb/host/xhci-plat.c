@@ -174,6 +174,10 @@ static int xhci_plat_probe(struct platform_device *pdev)
 			goto put_usb3_hcd;
 	}
 
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
+	xhci->vbus_regs = ioremap_nocache(XHCI_USB3_VBUS_CONTROL_BASE, XHCI_USB3_VBUS_CONTROL_SIZE);
+#endif
+
 	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (ret)
 		goto disable_usb_phy;
@@ -192,6 +196,9 @@ dealloc_usb2_hcd:
 	usb_remove_hcd(hcd);
 
 disable_usb_phy:
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
+	iounmap(xhci->vbus_regs);
+#endif
 	usb_phy_shutdown(hcd->usb_phy);
 
 put_usb3_hcd:
@@ -214,6 +221,11 @@ static int xhci_plat_remove(struct platform_device *dev)
 	struct clk *clk = xhci->clk;
 
 	xhci->xhc_state |= XHCI_STATE_REMOVING;
+
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
+	if (xhci->vbus_regs)
+		iounmap(xhci->vbus_regs);
+#endif
 
 	usb_remove_hcd(xhci->shared_hcd);
 	usb_phy_shutdown(hcd->usb_phy);
