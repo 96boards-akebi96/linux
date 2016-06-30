@@ -31,6 +31,10 @@
 #define	PORT_RWC_BITS	(PORT_CSC | PORT_PEC | PORT_WRC | PORT_OCC | \
 			 PORT_RC | PORT_PLC | PORT_PE)
 
+#ifdef CONFIG_USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
+#define USB_PORT_FEAT_COMPLIANCE_RESET 40
+#endif
+
 /* USB 3 BOS descriptor and a capability descriptors, combined.
  * Fields will be adjusted and added later in xhci_create_usb3_bos_desc()
  */
@@ -1140,6 +1144,17 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			temp |= PORT_U2_TIMEOUT(timeout);
 			writel(temp, port_array[wIndex] + PORTPMSC);
 			break;
+#ifdef CONFIG_USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
+		case USB_PORT_FEAT_COMPLIANCE_RESET:
+			temp = readl(port_array[wIndex]);
+			temp = xhci_port_state_to_neutral(temp);
+			temp &= ~PORT_POWER;
+			temp &= ~PORT_RESET;
+			writel(temp, port_array[wIndex]);
+			temp |= PORT_POWER;
+			writel(temp, port_array[wIndex]);
+			break;
+#endif
 		default:
 			goto error;
 		}
@@ -1273,6 +1288,9 @@ int xhci_hub_status_data(struct usb_hcd *hcd, char *buf)
 		}
 		if ((temp & mask) != 0 ||
 			(bus_state->port_c_suspend & 1 << i) ||
+#ifdef CONFIG_USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
+			((temp & PORT_PLS_MASK) == XDEV_COMP_MOD) ||
+#endif
 			(bus_state->resume_done[i] && time_after_eq(
 			    jiffies, bus_state->resume_done[i]))) {
 			buf[(i + 1) / 8] |= 1 << (i + 1) % 8;
@@ -1378,7 +1396,7 @@ static bool xhci_port_missing_cas_quirk(int port_index,
 		return false;
 
 	if (((portsc & PORT_PLS_MASK) != XDEV_POLLING) &&
-	    ((portsc & PORT_PLS_MASK) != XDEV_COMP_MODE))
+	    ((portsc & PORT_PLS_MASK) != XDEV_COMP_MOD))
 		return false;
 
 	/* clear wakeup/change bits, and do a warm port reset */

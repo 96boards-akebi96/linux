@@ -30,6 +30,13 @@ config USB_UNIPHIER_WA_EHCI_BURSTSIZE
 	---help---
 	  If unsure, say N.
 
+config USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
+	bool "Uniphier USB workaround for unexpected transition to compliance mode"
+	depends on USB_UNIPHIER_WA
+	default y
+	---help---
+	  If unsure, say N.
+
 #Uniphier USB WA end    ----------------------------------------------------
 
 config USB_XHCI_HCD
