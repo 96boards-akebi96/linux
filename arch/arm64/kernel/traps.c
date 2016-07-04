@@ -53,6 +53,29 @@ static const char *handler[]= {
 
 int show_unhandled_signals = 0;
 
+#if defined(CONFIG_DEBUG_RECS_CHECK)
+#include <asm/io.h>
+
+#define ACCESS_CHECK_REG	(0x5fc44624) /* XXX: unknown block */
+void __check_recs_abort(int reason)
+{
+	void __iomem *ioreg;
+	u32 val;
+
+	ioreg = ioremap_nocache(ACCESS_CHECK_REG, 4);
+	if (ioreg == NULL)
+		return;
+	val = *(u32 *)ioreg;
+	iounmap(ioreg);
+
+	val = (val >> 28) & 0xf;
+	if ((val == 8) || (val == 9))
+		pr_alert("[ReCS] %s problem (reason:%s)\n",
+			 (val == 8) ? "write" : "read",
+			 (reason >= 0) ? handler[reason] : "Data Abort");
+}
+#endif /* CONFIG_DEBUG_RECS_CHECK */
+
 /*
  * Dump out the contents of some memory nicely...
  */
@@ -518,6 +541,10 @@ const char *esr_get_class_string(u32 esr)
 asmlinkage void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
 {
 	console_verbose();
+
+#if defined(CONFIG_DEBUG_RECS_CHECK)
+	__check_recs_abort(reason);
+#endif /* CONFIG_DEBUG_RECS_CHECK */
 
 	pr_crit("Bad mode in %s handler detected, code 0x%08x -- %s\n",
 		handler[reason], esr, esr_get_class_string(esr));

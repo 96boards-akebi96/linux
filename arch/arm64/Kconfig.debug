@@ -87,4 +87,12 @@ config DEBUG_ALIGN_RODATA
 
 source "drivers/hwtracing/coresight/Kconfig"
 
+config DEBUG_RECS_CHECK
+       bool "Kernel Support for detector of ReCS access problem (EXPERIMENTAL)"
+       depends on ARCH_UNIPHIER
+       default y
+	help
+	  This option enables support for detection of ReCS access problem.
+	  XXX: Since this option is tentative, it will be removed soon.
+
 endmenu

@@ -460,6 +460,11 @@ static int __kprobes do_translation_fault(unsigned long addr,
  */
 static int do_bad(unsigned long addr, unsigned int esr, struct pt_regs *regs)
 {
+#if defined(CONFIG_DEBUG_RECS_CHECK)
+	extern void __check_recs_abort(int);
+	__check_recs_abort(-1);
+#endif /* CONFIG_DEBUG_RECS_CHECK */
+
 	return 1;
 }
 
