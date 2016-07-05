@@ -562,11 +562,6 @@
 		compatible = "socionext,ph1-pro4-usbphy";
 		reg = <0x5f800500 0x20>;
 	};
-
-	aidet@5fc20000 {
-		compatible = "socionext,uniphier-aidet";
-		reg = <0x5fc20000 0x20>;
-	};
 };
 
 &refclk {
