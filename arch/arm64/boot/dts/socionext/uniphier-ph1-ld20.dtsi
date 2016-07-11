@@ -511,6 +511,7 @@
 				compatible = "snps,dwc3";
 				reg = <0x65a00000 0x14100>;
 				interrupts = <0 134 4>;
+				dr_mode = "host";
 				tx-fifo-resize;
 			};
 		};
