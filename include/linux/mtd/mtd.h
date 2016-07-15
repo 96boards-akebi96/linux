@@ -92,6 +92,9 @@ struct mtd_oob_ops {
 	uint32_t	ooboffs;
 	uint8_t		*datbuf;
 	uint8_t		*oobbuf;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int		retPage;
+#endif
 };
 
 #define MTD_MAX_OOBFREE_ENTRIES_LARGE	32

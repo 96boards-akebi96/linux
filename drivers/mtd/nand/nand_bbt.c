@@ -76,6 +76,16 @@
 #define BBT_ENTRY_MASK		0x03
 #define BBT_ENTRY_SHIFT		2
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+static int getRsvBlock(struct mtd_info *psMtd, int chipNum);
+static int whatKindOfBlock(struct mtd_info *psMtd, int blockNum);
+static int registerAltBlock(struct mtd_info *psMtd, int pageNum, int rsvBlock);
+static int setBbMap(struct mtd_info *psMtd, int blockNum);
+static int readBlockExpOnePage(struct mtd_info *psMtd, int pageNum, u8 *pBlockBuf, u32 *erased_map);
+static int readBlock(struct mtd_info *psMtd, int block, u8 *block_buf, u32 *erased_map);
+static int setBbFlag(struct mtd_info *psMtd, int pageNum);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 static int nand_update_bbt(struct mtd_info *mtd, loff_t offs);
 
 static inline uint8_t bbt_get_entry(struct nand_chip *chip, int block)
@@ -152,8 +162,19 @@ static u32 add_marker_len(struct nand_bbt_descr *td)
 		return 0;
 
 	len = td->len;
-	if (td->options & NAND_BBT_VERSION)
+	if (td->options & NAND_BBT_VERSION) {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+		len += 4;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 		len++;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+	}
+	return len;
+}
+
+static inline unsigned int __bbcpy(void *dst, const void *src, unsigned int len)
+{
+	memcpy(dst, src, len);
 	return len;
 }
 
@@ -171,16 +192,34 @@ static u32 add_marker_len(struct nand_bbt_descr *td)
 static int read_bbt(struct mtd_info *mtd, uint8_t *buf, int page, int num,
 		struct nand_bbt_descr *td, int offs)
 {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int res, ret = 0;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int res, ret = 0, i, j, act = 0;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	struct nand_chip *this = mtd->priv;
 	size_t retlen, len, totlen;
 	loff_t from;
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	int bits = td->options & NAND_BBT_NRBITS_MSK;
 	uint8_t msk = (uint8_t)((1 << bits) - 1);
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 	u32 marker_len;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int chip = page >> (this->chip_shift - this->page_shift);
+	struct nand_bbm *bbm = &this->psBbm[chip];
+	size_t offset;
+
+	totlen = bbm->bbmPages * mtd->writesize;
+	if (totlen > (1 << this->bbt_erase_shift)) {
+		pr_err("The size of BBM may not exceed 1 block.\n");
+		return -EINVAL;
+	}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int reserved_block_code = td->reserved_block_code;
 
 	totlen = (num * bits) >> 3;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	marker_len = add_marker_len(td);
 	from = ((loff_t)page) << this->page_shift;
 
@@ -191,6 +230,9 @@ static int read_bbt(struct mtd_info *mtd, uint8_t *buf, int page, int num,
 			 * In case the BBT marker is not in the OOB area it
 			 * will be just in the first page.
 			 */
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+			totlen -= marker_len;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 			len -= marker_len;
 			from += marker_len;
 			marker_len = 0;
@@ -211,6 +253,7 @@ static int read_bbt(struct mtd_info *mtd, uint8_t *buf, int page, int num,
 			}
 		}
 
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 		/* Analyse data */
 		for (i = 0; i < len; i++) {
 			uint8_t dat = buf[i];
@@ -244,9 +287,19 @@ static int read_bbt(struct mtd_info *mtd, uint8_t *buf, int page, int num,
 				mtd->ecc_stats.badblocks++;
 			}
 		}
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 		totlen -= len;
 		from += len;
 	}
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	offset = 0;
+	offset += __bbcpy(&bbm->usedMtBlocks, &buf[offset], sizeof(bbm->usedMtBlocks));
+	offset += __bbcpy(&bbm->altBlocks, &buf[offset], sizeof(bbm->altBlocks));
+	offset += __bbcpy(&this->bbt_td->pages[chip], &buf[offset], sizeof(this->bbt_td->pages[chip]));
+	offset += __bbcpy(&this->bbt_md->pages[chip], &buf[offset], sizeof(this->bbt_md->pages[chip]));
+	offset += __bbcpy(bbm->pBbMap, &buf[offset], bbm->bbMapSize);
+	offset += __bbcpy(bbm->psBbList, &buf[offset], bbm->bbListSize);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	return ret;
 }
 
@@ -285,6 +338,38 @@ static int read_abs_bbt(struct mtd_info *mtd, uint8_t *buf, struct nand_bbt_desc
 	}
 	return 0;
 }
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+/* Scan read raw oob from flash, ant set data 0xff */
+static int scan_read_raw_only_oob(struct mtd_info *mtd, uint8_t *buf,
+				  loff_t offs, size_t len)
+{
+	struct mtd_oob_ops ops;
+	size_t datlen;
+	int res;
+
+	ops.mode = MTD_OPS_RAW;
+	ops.ooblen = mtd->oobsize;
+	ops.ooboffs = 0;
+	ops.datbuf = NULL;
+
+	while (len > 0) {
+		datlen = min(len, (size_t)mtd->writesize);
+		memset(buf, 0xff, datlen);
+		ops.oobbuf = buf + datlen;
+
+		res = mtd_read_oob(mtd, offs, &ops);
+
+		if (res)
+			return res;
+
+		buf += mtd->oobsize + mtd->writesize;
+		len -= mtd->writesize;
+		offs += mtd->writesize;
+	}
+	return 0;
+}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 /* BBT marker is in the first page, no OOB */
 static int scan_read_data(struct mtd_info *mtd, uint8_t *buf, loff_t offs,
@@ -355,15 +440,47 @@ static int scan_write_bbt(struct mtd_info *mtd, loff_t offs, size_t len,
 			  uint8_t *buf, uint8_t *oob)
 {
 	struct mtd_oob_ops ops;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	struct nand_chip *this = mtd->priv;
+	struct nand_bbm *bbm;
+	int ret, reserveblock, chip;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	ops.mode = MTD_OPS_PLACE_OOB;
 	ops.ooboffs = 0;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	ops.ooblen = mtd->oobsize * (len / mtd->writesize);
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	ops.ooblen = mtd->oobsize;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	ops.datbuf = buf;
 	ops.oobbuf = oob;
 	ops.len = len;
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	ops.retPage = -1;
+	ret = this->fWriteOps(mtd, offs, &ops);
+	if (ret) {
+		if (ops.retPage == -1) {
+			return -EIO;
+		}
+		setBbFlag(mtd, ops.retPage);
+		setBbMap(mtd, ops.retPage >> (this->bbt_erase_shift - this->page_shift));
+
+		chip = offs >> this->chip_shift;
+		reserveblock = getRsvBlock(mtd, chip);
+		if (reserveblock < 0) {
+			return -ENOSPC;
+		}
+		bbm = &this->psBbm[chip];
+		bbm->usedMtBlocks++;
+		return reserveblock;
+	}
+
+	return 0;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	return mtd_write_oob(mtd, offs, &ops);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 static u32 bbt_get_ver_offs(struct mtd_info *mtd, struct nand_bbt_descr *td)
@@ -440,6 +557,68 @@ static int scan_block_fast(struct mtd_info *mtd, struct nand_bbt_descr *bd,
 	return 0;
 }
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+static int create_alternate_list(struct mtd_info *mtd, int chip)
+{
+	struct nand_chip *this = mtd->priv;
+	struct nand_bbm *bbm = &this->psBbm[chip];
+	struct nand_bbList *bblist = bbm->psBbList;
+	u32 *bbmap = bbm->pBbMap;
+	int i, j, area, badblock, reserveblock;
+	int blocks_per_chip = 1 << (this->chip_shift - this->bbt_erase_shift);
+	const int bits = 32;
+
+	for (i = 0; i < DIV_ROUND_UP(blocks_per_chip, bits); i++) {
+		if (!bbmap[i]) {
+			continue;
+		}
+
+		for (j = 0; j < bits; j++) {
+			if (!(bbmap[i] & (1 << j))) {
+				continue;
+			}
+
+			badblock = (i * bits + j) + chip * blocks_per_chip;
+			area = whatKindOfBlock(mtd, badblock);
+			switch (area) {
+			case NAND_AREA_NORMAL:
+				reserveblock = getRsvBlock(mtd, chip);
+				if (reserveblock < 0) {
+					return -ENOSPC;
+				}
+				bblist[bbm->altBlocks].badBlock = badblock;
+				bblist[bbm->altBlocks].altBlock = reserveblock;
+				bbm->altBlocks++;
+				bbm->usedMtBlocks++;
+				break;
+			case NAND_AREA_MASTER:
+			case NAND_AREA_MIRROR:
+				reserveblock = getRsvBlock(mtd, chip);
+				if (reserveblock < 0) {
+					return -ENOSPC;
+				}
+				if (area == NAND_AREA_MASTER) {
+					this->bbt_td->pages[chip] = reserveblock <<
+						(this->bbt_erase_shift - this->page_shift);
+				} else {
+					this->bbt_md->pages[chip] = reserveblock <<
+						(this->bbt_erase_shift - this->page_shift);
+				}
+				bbm->usedMtBlocks++;
+				break;
+			case NAND_AREA_MAINTAIN:
+			case NAND_AREA_BOOT:
+				break;
+			default:
+				return -EFAULT;
+			}
+		}
+	}
+
+	return 0;
+}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 /**
  * create_bbt - [GENERIC] Create a bad block table by scanning the device
  * @mtd: MTD device structure
@@ -458,6 +637,12 @@ static int create_bbt(struct mtd_info *mtd, uint8_t *buf,
 	int i, numblocks, numpages;
 	int startblock;
 	loff_t from;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	struct nand_bbm *bbm;
+	struct nand_bbt_descr *td = this->bbt_td;
+	struct nand_bbt_descr *md = this->bbt_md;
+	int ret = 0;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	pr_info("Scanning device for bad blocks\n");
 
@@ -485,8 +670,25 @@ static int create_bbt(struct mtd_info *mtd, uint8_t *buf,
 	if (this->bbt_options & NAND_BBT_SCANLASTPAGE)
 		from += mtd->erasesize - (mtd->writesize * numpages);
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	if (chip == -1) {
+		chip = 0;
+	}
+	bbm = &this->psBbm[chip];
+	memset(bbm->pBbMap, 0, bbm->bbMapSize);
+	memset(bbm->psBbList, 0, bbm->bbListSize);
+	bbm->altBlocks = 0;
+	bbm->usedMtBlocks = 2;
+	td->pages[chip] = (bbm->area[NAND_AREA_ID_BBM].startBlock + 1) <<
+		(this->bbt_erase_shift - this->page_shift);
+	md->pages[chip] = bbm->area[NAND_AREA_ID_BBM].startBlock <<
+		(this->bbt_erase_shift - this->page_shift);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 	for (i = startblock; i < numblocks; i++) {
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 		int ret;
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 		BUG_ON(bd->options & NAND_BBT_NO_OOB);
 
@@ -495,7 +697,11 @@ static int create_bbt(struct mtd_info *mtd, uint8_t *buf,
 			return ret;
 
 		if (ret) {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+			setBbMap(mtd, i);
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 			bbt_mark_entry(this, i, BBT_BLOCK_FACTORY_BAD);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 			pr_warn("Bad eraseblock %d at 0x%012llx\n",
 				i, (unsigned long long)from);
 			mtd->ecc_stats.badblocks++;
@@ -503,8 +709,94 @@ static int create_bbt(struct mtd_info *mtd, uint8_t *buf,
 
 		from += (1 << this->bbt_erase_shift);
 	}
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	ret = create_alternate_list(mtd, chip);
+	if (ret) {
+		return ret;
+	}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 	return 0;
 }
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+static int search_bbt_range(struct mtd_info *mtd, uint8_t *buf,
+			    struct nand_bbt_descr *td, int startblock,
+			    int searchblocks, int dir, int chip)
+{
+	struct nand_chip *this = mtd->priv;
+	struct nand_bbm *bbm = &this->psBbm[chip];
+	int block, actblock, readpages, bad = 0, i;
+	int scanlen = mtd->writesize + mtd->oobsize;
+	int blocktopage = this->bbt_erase_shift - this->page_shift;
+	loff_t offs;
+	size_t len;
+	uint8_t *oob;
+
+	for (block = 0; block < searchblocks; block++) {
+		actblock = startblock + dir * block;
+		offs = (loff_t)actblock << this->bbt_erase_shift;
+		readpages = bbm->bbmPages;
+		if ((this->bbt_options & NAND_BBT_SCAN2NDPAGE) &&
+		    readpages < 2) {
+			len = 2 * mtd->writesize;
+		} else {
+			len = readpages * mtd->writesize;
+		}
+		scan_read_raw_only_oob(mtd, buf, offs, len);
+
+		/* check bad */
+		i = 0;
+		do {
+			oob = buf + (mtd->writesize + mtd->oobsize) * i;
+			if (check_short_pattern(oob + mtd->writesize,
+						this->badblock_pattern)) {
+				bad = 1;
+				break;
+			}
+			i++;
+		} while ((this->bbt_options & NAND_BBT_SCAN2NDPAGE) && i < 2);
+		if (bad) {
+			bad = 0;
+			continue;
+		}
+
+		if (td->options & NAND_BBT_NO_OOB) {
+			/* check bbt flag */
+			for (i = 0; i < readpages; i++) {
+				oob = buf + (mtd->writesize + mtd->oobsize) * i;
+				if (!check_short_pattern(oob + mtd->writesize,
+							 this->bbt_flag)) {
+					bad = 1;
+					break;
+				}
+			}
+			if (bad) {
+				bad = 0;
+				continue;
+			}
+
+			/* Read first page */
+			scan_read(mtd, buf, offs, mtd->writesize, td);
+		} else {
+			/* skip read because already read by scan_read_raw_only_oob */
+		}
+
+		/* check bbt pattern and version */
+		if (!check_pattern(buf, scanlen, mtd->writesize, td)) {
+			td->pages[chip] = actblock << blocktopage;
+			if (td->options & NAND_BBT_VERSION) {
+				offs = bbt_get_ver_offs(mtd, td);
+				td->version[chip] = buf[offs];
+			}
+			break;
+		}
+	}
+
+	return block < searchblocks ? 0 : -ENODEV;
+}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 /**
  * search_bbt - [GENERIC] scan the device for a specific bad block table
@@ -525,15 +817,29 @@ static int search_bbt(struct mtd_info *mtd, uint8_t *buf, struct nand_bbt_descr 
 {
 	struct nand_chip *this = mtd->priv;
 	int i, chips;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int startblock, dir;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int startblock, block, dir;
 	int scanlen = mtd->writesize + mtd->oobsize;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int bbtblocks;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	struct nand_bbm *bbm;
+	int searchblocks;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int blocktopage = this->bbt_erase_shift - this->page_shift;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	/* Search direction top -> down? */
 	if (td->options & NAND_BBT_LASTBLOCK) {
 		startblock = (mtd->size >> this->bbt_erase_shift) - 1;
 		dir = -1;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	} else if (td->options & NAND_BBT_FLEXIBLE) {
+		startblock = 0; /* dummy. this parameter is overwitten. */
+		dir = -1;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	} else {
 		startblock = 0;
 		dir = 1;
@@ -554,6 +860,27 @@ static int search_bbt(struct mtd_info *mtd, uint8_t *buf, struct nand_bbt_descr 
 		td->version[i] = 0;
 		td->pages[i] = -1;
 		/* Scan the maximum number of blocks */
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+		bbm = &this->psBbm[i];
+		if (td->options & NAND_BBT_FLEXIBLE) {
+			searchblocks = bbm->area[NAND_AREA_ID_BBM].blockNum;
+			startblock = bbm->area[NAND_AREA_ID_BBM].startBlock +
+				searchblocks - 1;
+
+			if (search_bbt_range(mtd, buf, td, startblock,
+					     searchblocks, dir, i)) {
+				searchblocks = bbm->area[NAND_AREA_ID_ALT].blockNum;
+				startblock = bbm->area[NAND_AREA_ID_ALT].startBlock +
+					searchblocks - 1;
+
+				search_bbt_range(mtd, buf, td, startblock,
+						 searchblocks, dir, i);
+			}
+		} else {
+			search_bbt_range(mtd, buf, td, startblock,
+					 bbm->mtBlocks, dir, i);
+		}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 		for (block = 0; block < td->maxblocks; block++) {
 
 			int actblock = startblock + dir * block;
@@ -570,6 +897,7 @@ static int search_bbt(struct mtd_info *mtd, uint8_t *buf, struct nand_bbt_descr 
 				break;
 			}
 		}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 		startblock += this->chipsize >> this->bbt_erase_shift;
 	}
 	/* Check, if we found a bbt for each requested chip */
@@ -621,6 +949,14 @@ static int write_bbt(struct mtd_info *mtd, uint8_t *buf,
 	struct nand_chip *this = mtd->priv;
 	struct erase_info einfo;
 	int i, res, chip = 0;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int page, offs, numblocks;
+	int nrchips, ooboffs;
+	size_t len = 0;
+	struct nand_bbm * bbm;
+	int reserveblock;
+	loff_t to;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int bits, startblock, dir, page, offs, numblocks, sft, sftmsk;
 	int nrchips, pageoffs, ooboffs;
 	uint8_t msk[4];
@@ -636,6 +972,7 @@ static int write_bbt(struct mtd_info *mtd, uint8_t *buf,
 
 	if (!rcode)
 		rcode = 0xff;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	/* Write bad block table per chip rather than per device? */
 	if (td->options & NAND_BBT_PERCHIP) {
 		numblocks = (int)(this->chipsize >> this->bbt_erase_shift);
@@ -663,6 +1000,11 @@ static int write_bbt(struct mtd_info *mtd, uint8_t *buf,
 			goto write;
 		}
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+		page = 0; /* set dummy param to avoid warning. */
+		pr_err("not reach when CONFIG_MTD_NAND_UNIPHIER_BBM is enabled!! \n");
+		BUG();
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 		/*
 		 * Automatic placement of the bad block table. Search direction
 		 * top -> down?
@@ -691,8 +1033,79 @@ static int write_bbt(struct mtd_info *mtd, uint8_t *buf,
 		}
 		pr_err("No space left to write bad block table\n");
 		return -ENOSPC;
+#endif/* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 	write:
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+		to = ((loff_t)page) << this->page_shift;
+
+		bbm = &this->psBbm[chip];
+		memset(buf, 0xff, bbm->bbmPages * (mtd->writesize + mtd->oobsize));
+		offs = 0;
+		ooboffs = bbm->bbmPages * mtd->writesize;
+		if (td->options & NAND_BBT_NO_OOB) {
+			struct nand_bbt_descr *bbtflag = this->bbt_flag;
+			/* set bbt flag*/
+			for (i = 0; i < bbm->bbmPages; i++) {
+				buf[ooboffs + bbtflag->offs] = 0;
+				ooboffs += mtd->oobsize;
+			}
+			/* pattern */
+			offs += __bbcpy(buf, td->pattern, td->len);
+			/* version */
+			if (td->options & NAND_BBT_VERSION) {
+				len = roundup(sizeof(td->version[chip]), sizeof(u32));
+				buf[offs] = td->version[chip];
+				offs += len;
+			}
+		} else {
+			for (i = 0; i < bbm->bbmPages; i++) {
+				/* pattern */
+				memcpy(buf + ooboffs + td->offs, td->pattern, td->len);
+				/* version */
+				if (td->options & NAND_BBT_VERSION) {
+					buf[ooboffs + td->veroffs] = td->version[chip];
+				}
+				ooboffs += mtd->oobsize;
+			}
+		}
+		offs += __bbcpy(buf + offs, &bbm->usedMtBlocks, sizeof(bbm->usedMtBlocks));
+		offs += __bbcpy(buf + offs, &bbm->altBlocks, sizeof(bbm->altBlocks));
+		offs += __bbcpy(buf + offs, &this->bbt_td->pages[chip], sizeof(this->bbt_td->pages[chip]));
+		offs += __bbcpy(buf + offs, &this->bbt_md->pages[chip], sizeof(this->bbt_md->pages[chip]));
+		offs += __bbcpy(buf + offs, bbm->pBbMap, bbm->bbMapSize);
+		offs += __bbcpy(buf + offs, bbm->psBbList, bbm->bbListSize);
+		len = ALIGN(offs, mtd->writesize);
+
+		memset(&einfo, 0, sizeof(einfo));
+		einfo.mtd = mtd;
+		einfo.addr = to;
+		einfo.len = 1 << this->bbt_erase_shift;
+		einfo.fail_addr = MTD_FAIL_ADDR_UNKNOWN;
+		res = nand_erase_nand(mtd, &einfo, NAND_ALLOW_BBT);
+		if (res) {
+			if (einfo.fail_addr == MTD_FAIL_ADDR_UNKNOWN) {
+				return -EIO;
+			}
+			setBbFlag(mtd, einfo.fail_addr >> this->page_shift);
+			setBbMap(mtd, einfo.fail_addr >> this->bbt_erase_shift);
+
+			reserveblock = getRsvBlock(mtd, chip);
+			if (reserveblock < 0) {
+				return -ENOSPC;
+			}
+			bbm->usedMtBlocks++;
+			return reserveblock;
+		}
+
+		res = scan_write_bbt(mtd, to, len, buf, &buf[len]);
+		if (res < 0) {
+			goto outerr;
+		} else if (res) {
+			return res;
+		}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 		/* Set up shift count and masks for the flash table */
 		bits = td->options & NAND_BBT_NRBITS_MSK;
 		msk[2] = ~rcode;
@@ -795,6 +1208,7 @@ static int write_bbt(struct mtd_info *mtd, uint8_t *buf,
 				&buf[len]);
 		if (res < 0)
 			goto outerr;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 		pr_info("Bad block table written to 0x%012llx, version 0x%02X\n",
 			 (unsigned long long)to, td->version[chip]);
@@ -808,6 +1222,53 @@ static int write_bbt(struct mtd_info *mtd, uint8_t *buf,
 	pr_warn("nand_bbt: error while writing bad block table %d\n", res);
 	return res;
 }
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+static int write_bbts(struct mtd_info *mtd, uint8_t *buf,
+		      struct nand_bbt_descr *td, struct nand_bbt_descr *md,
+		      int chipsel)
+{
+	struct nand_chip *this = mtd->priv;
+	int td_written = 0, md_written = 0;
+	int res, chip = chipsel;
+
+	BUG_ON(chipsel == -1);
+
+	while (!td_written || !md_written) {
+		while (!td_written) {
+			res = write_bbt(mtd, buf, td, md, chipsel);
+			if (!res) {
+				td_written = 1;
+			} else if (res > 0) {
+				td->pages[chip] = res <<
+					(this->bbt_erase_shift - this->page_shift);
+				td->version[chip]++;
+				md->version[chip] = td->version[chip];
+				md_written = 0;
+			} else {
+				return -ENOSPC;
+			}
+		}
+
+		while (!md_written) {
+			res = write_bbt(mtd, buf, md, td, chipsel);
+			if (!res) {
+				md_written = 1;
+			} else if (res > 0) {
+				md->pages[chip] = res <<
+					(this->bbt_erase_shift - this->page_shift);
+				md->version[chip]++;
+				td->version[chip] = md->version[chip];
+				td_written = 0;
+			} else {
+				return -ENOSPC;
+			}
+		}
+	}
+
+	return 0;
+}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 /**
  * nand_memory_bbt - [GENERIC] create a memory based bad block table
@@ -931,27 +1392,61 @@ static int check_create(struct mtd_info *mtd, uint8_t *buf, struct nand_bbt_desc
 
 		/* Update version numbers before writing */
 		if (md) {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+			if (((int8_t)(td->version[i] - md->version[i])) > 0) {
+				md->version[i] = td->version[i];
+			} else {
+				td->version[i] = md->version[i];
+			}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 			td->version[i] = max(td->version[i], md->version[i]);
 			md->version[i] = td->version[i];
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 		}
 
 		/* Write the bad block table to the device? */
 		if ((writeops & 0x01) && (td->options & NAND_BBT_WRITE)) {
 			res = write_bbt(mtd, buf, td, md, chipsel);
-			if (res < 0)
+			if (res < 0) {
 				return res;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+			} else if (res) {
+				td->pages[chipsel] = res <<
+					(this->bbt_erase_shift - this->page_shift);
+				td->version[chipsel]++;
+				md->version[chipsel] = td->version[chipsel];
+				res = write_bbts(mtd, buf, td, md, chipsel);
+				if (res < 0) {
+					return res;
+				}
+				writeops = 0;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+			}
 		}
 
 		/* Write the mirror bad block table to the device? */
 		if ((writeops & 0x02) && md && (md->options & NAND_BBT_WRITE)) {
 			res = write_bbt(mtd, buf, md, td, chipsel);
-			if (res < 0)
+			if (res < 0) {
 				return res;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+			} else if (res) {
+				md->pages[chipsel] = res <<
+					(this->bbt_erase_shift - this->page_shift);
+				md->version[chipsel]++;
+				td->version[chipsel] = md->version[chipsel];
+				res = write_bbts(mtd, buf, md, td, chipsel);
+				if (res < 0) {
+					return res;
+				}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+			}
 		}
 	}
 	return 0;
 }
 
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 /**
  * mark_bbt_regions - [GENERIC] mark the bad block table regions
  * @mtd: MTD device structure
@@ -1011,6 +1506,7 @@ static void mark_bbt_region(struct mtd_info *mtd, struct nand_bbt_descr *td)
 					this->bbt_erase_shift);
 	}
 }
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 /**
  * verify_bbt_descr - verify the bad block description
@@ -1058,6 +1554,17 @@ static void verify_bbt_descr(struct mtd_info *mtd, struct nand_bbt_descr *bd)
 	if (bd->options & NAND_BBT_NO_OOB)
 		table_size += pattern_len;
 	BUG_ON(table_size > (1 << this->bbt_erase_shift));
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	BUG_ON((bd->options & NAND_BBT_NRBITS_MSK) != NAND_BBT_1BIT);
+	BUG_ON(!(bd->options & NAND_BBT_PERCHIP));
+	BUG_ON(!(bd->options & NAND_BBT_VERSION));
+	BUG_ON(!(bd->options & NAND_BBT_CREATE));
+	BUG_ON(!(bd->options & NAND_BBT_WRITE));
+	BUG_ON(!(bd->options & NAND_BBT_SCAN2NDPAGE));
+	BUG_ON(bd->options & NAND_BBT_DYNAMICSTRUCT);
+
+	BUG_ON(!(this->bbt_options & NAND_BBT_USE_FLASH));
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /**
@@ -1075,11 +1582,19 @@ static void verify_bbt_descr(struct mtd_info *mtd, struct nand_bbt_descr *bd)
 static int nand_scan_bbt(struct mtd_info *mtd, struct nand_bbt_descr *bd)
 {
 	struct nand_chip *this = mtd->priv;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int res;
+	uint8_t *buf = this->pBlockBuf;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int len, res;
 	uint8_t *buf;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	struct nand_bbt_descr *td = this->bbt_td;
 	struct nand_bbt_descr *md = this->bbt_md;
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	/* BBM resource has been got in nand-gpbc.c */
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	len = (mtd->size >> (this->bbt_erase_shift + 2)) ? : 1;
 	/*
 	 * Allocate memory (2bit per block) and clear the memory bad block
@@ -1088,6 +1603,7 @@ static int nand_scan_bbt(struct mtd_info *mtd, struct nand_bbt_descr *bd)
 	this->bbt = kzalloc(len, GFP_KERNEL);
 	if (!this->bbt)
 		return -ENOMEM;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	/*
 	 * If no primary table decriptor is given, scan the device to build a
@@ -1103,6 +1619,7 @@ static int nand_scan_bbt(struct mtd_info *mtd, struct nand_bbt_descr *bd)
 	verify_bbt_descr(mtd, td);
 	verify_bbt_descr(mtd, md);
 
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	/* Allocate a temporary buffer for one eraseblock incl. oob */
 	len = (1 << this->bbt_erase_shift);
 	len += (len >> this->page_shift) * mtd->oobsize;
@@ -1111,6 +1628,7 @@ static int nand_scan_bbt(struct mtd_info *mtd, struct nand_bbt_descr *bd)
 		res = -ENOMEM;
 		goto err;
 	}
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	/* Is the bbt at a given page? */
 	if (td->options & NAND_BBT_ABSPAGE) {
@@ -1124,17 +1642,21 @@ static int nand_scan_bbt(struct mtd_info *mtd, struct nand_bbt_descr *bd)
 	if (res)
 		goto err;
 
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	/* Prevent the bbt regions from erasing / writing */
 	mark_bbt_region(mtd, td);
 	if (md)
 		mark_bbt_region(mtd, md);
 
 	vfree(buf);
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 	return 0;
 
 err:
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	kfree(this->bbt);
 	this->bbt = NULL;
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 	return res;
 }
 
@@ -1154,8 +1676,13 @@ static int nand_update_bbt(struct mtd_info *mtd, loff_t offs)
 	struct nand_bbt_descr *td = this->bbt_td;
 	struct nand_bbt_descr *md = this->bbt_md;
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	if (!this->psBbm || !td)
+		return -EINVAL;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	if (!this->bbt || !td)
 		return -EINVAL;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	/* Allocate a temporary buffer for one eraseblock incl. oob */
 	len = (1 << this->bbt_erase_shift);
@@ -1177,6 +1704,9 @@ static int nand_update_bbt(struct mtd_info *mtd, loff_t offs)
 	if (md)
 		md->version[chip]++;
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	res = write_bbts(mtd, buf, td, md, chipsel);
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	/* Write the bad block table to the device? */
 	if (td->options & NAND_BBT_WRITE) {
 		res = write_bbt(mtd, buf, td, md, chipsel);
@@ -1189,6 +1719,7 @@ static int nand_update_bbt(struct mtd_info *mtd, loff_t offs)
 	}
 
  out:
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	kfree(buf);
 	return res;
 }
@@ -1319,9 +1850,19 @@ int nand_isreserved_bbt(struct mtd_info *mtd, loff_t offs)
 {
 	struct nand_chip *this = mtd->priv;
 	int block;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int kind;
 
 	block = (int)(offs >> this->bbt_erase_shift);
+	kind = whatKindOfBlock(mtd, block);
+	if ((NAND_AREA_MASTER == kind) || (NAND_AREA_MIRROR == kind)) {
+		return 1;
+	}
+	return 0;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+	block = (int)(offs >> this->bbt_erase_shift);
 	return bbt_get_entry(this, block) == BBT_BLOCK_RESERVED;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /**
@@ -1333,6 +1874,38 @@ int nand_isreserved_bbt(struct mtd_info *mtd, loff_t offs)
 int nand_isbad_bbt(struct mtd_info *mtd, loff_t offs, int allowbbt)
 {
 	struct nand_chip *this = mtd->priv;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int block;
+	struct nand_bbm *bbm;
+	u32 *bitmap;
+	int kind, chipnr, base;
+
+	chipnr = offs >> this->chip_shift;
+	block = offs >> this->bbt_erase_shift;
+
+	bbm = &this->psBbm[chipnr];
+	if (bbm->usedMtBlocks == -1) {
+		return -1;
+	}
+
+	kind = whatKindOfBlock(mtd, block);
+	if (((NAND_AREA_MASTER == kind) || (NAND_AREA_MIRROR == kind)) &&
+	    !(allowbbt & NAND_ALLOW_BBT)) {
+		return 1;
+	}
+
+	if ((NAND_AREA_NORMAL == kind) && !(allowbbt & NAND_ALLOW_BADDATA)) {
+		return 0;
+	}
+
+	base = (1 << (this->chip_shift - this->bbt_erase_shift)) * chipnr;
+	bitmap = bbm->pBbMap;
+	if (bitmap[(block - base) / 32] & (1 << ((block - base) % 32))) {
+		return 1;
+	}
+
+	return 0;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int block, res;
 
 	block = (int)(offs >> this->bbt_erase_shift);
@@ -1350,6 +1923,7 @@ int nand_isbad_bbt(struct mtd_info *mtd, loff_t offs, int allowbbt)
 		return allowbbt ? 0 : 1;
 	}
 	return 1;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /**
@@ -1373,5 +1947,693 @@ int nand_markbad_bbt(struct mtd_info *mtd, loff_t offs)
 
 	return ret;
 }
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+//Copy the data of the block except the specified page
+//
+static int readBlockExpSpecifiedPage(struct mtd_info *psMtd, int page, int num, u8 *block_buf, u32 *erased_map)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	u32 blockSize;
+	loff_t from1;
+	int status, i;
+	flstate_t oldState;
+	struct mtd_oob_ops sOps;
+	u8 *datbuf_base = block_buf;
+	u8 *oobbuf_base = block_buf + psMtd->erasesize;
+	int pages_per_block = 1 << (psNand->bbt_erase_shift - psNand->page_shift);
+	int block_top_page = page & ~((pages_per_block) - 1);
+
+	blockSize = (1 << (psNand->bbt_erase_shift - psNand->page_shift)) * (psMtd->writesize + psMtd->oobsize);
+	memset(block_buf, 0xff, blockSize);
+
+	oldState = psNand->state;
+	psNand->state = FL_READING;
+	sOps.mode = MTD_OPS_AUTO_OOB;
+	sOps.len = (size_t)psMtd->writesize;
+	sOps.ooblen = psMtd->oobavail;
+	sOps.ooboffs = 0;
+
+	for (i = 0; i < pages_per_block; i++) {
+		if ((block_top_page + i) >= page &&
+		    (block_top_page + i) < page + num) {
+			continue;
+		}
+
+		from1 = (block_top_page + i) << psNand->page_shift;
+		sOps.retlen = 0;
+		sOps.oobretlen = 0;
+		sOps.datbuf = datbuf_base + (psMtd->writesize * i);
+		sOps.oobbuf = oobbuf_base + (psMtd->oobavail * i);
+
+		status = psNand->fReadOps(psMtd, from1, &sOps);
+		if ((status && (status != -EUCLEAN)) || (sOps.len != sOps.retlen)) {
+			psNand->state = oldState;
+			return -1;
+		}
+	}
+	psNand->state = oldState;
+
+	return 0;
+}
+
+// Write data without erased page. The data has one block.
+//
+static int write_erased_page_oob(struct mtd_info *mtd, int page, u8 *oob_buf, int *retPage)
+{
+	struct nand_chip *this = mtd->priv;
+	loff_t to;
+	int status;
+	flstate_t oldState;
+	struct mtd_oob_ops ops;
+
+	to = page << this->page_shift;
+	oldState = this->state;
+	this->state = FL_WRITING;
+
+	memset(&ops, 0, sizeof(ops));
+	ops.mode = MTD_OPS_AUTO_OOB;
+	ops.ooblen = mtd->oobavail;
+	ops.oobbuf = oob_buf;
+	ops.retPage = -1;
+	status = this->fWriteOob(mtd, to, &ops);
+	*retPage = ops.retPage;
+	this->state = oldState;
+	if (mtd->oobavail != ops.oobretlen) {
+		return -1;
+	}
+	return status;
+}
+
+static int bbt_write_programed_pages(struct mtd_info *psMtd, int phys_block,
+				     u8 *pBlockBuf, u32 *erased_map,
+				     int *retPage)
+{
+	struct nand_chip*psNand = psMtd->priv;
+	loff_t to1;
+	int status;
+	flstate_t oldState;
+	struct mtd_oob_ops sOps;
+	u8 *datbuf_base = pBlockBuf;
+	u8 *oobbuf_base = pBlockBuf + psMtd->erasesize;
+	int i;
+	int pages_per_block = 1 << (psNand->bbt_erase_shift - psNand->page_shift);
+	int phys_page = phys_block * pages_per_block;
+
+	oldState = psNand->state;
+	psNand->state = FL_WRITING;
+	sOps.mode = MTD_OPS_AUTO_OOB;
+	sOps.len = psMtd->writesize;
+	sOps.ooblen = psMtd->oobavail;
+	sOps.ooboffs = 0;
+	for (i = 0; i < pages_per_block; i++) {
+		*retPage = -1;
+		if (is_bit_set_erased_map(i, erased_map)) {
+			/* write oob */
+			status = write_erased_page_oob(psMtd, phys_page + i,
+						       oobbuf_base + (psMtd->oobavail * i),
+						       retPage);
+			if (status) {
+				psNand->state = oldState;
+				return -1;
+			}
+			continue;
+		}
+		to1 = (phys_page + i) << psNand->page_shift;
+		sOps.retlen = 0;
+		sOps.oobretlen = 0;
+		sOps.datbuf = datbuf_base + (psMtd->writesize * i);
+		sOps.oobbuf = oobbuf_base + (psMtd->oobavail * i);
+		sOps.retPage = -1;
+		status = psNand->fWriteOps(psMtd, to1, &sOps);
+		*retPage = sOps.retPage;
+		if (status) {
+			psNand->state = oldState;
+			return -1;
+		}
+	}
+	psNand->state = oldState;
+
+	return 0;
+}
+
+//Substitute the alternate block for the bad block
+//
+int bbt_alternateBb(struct mtd_info *psMtd, int pageNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct nand_bbt_descr *td = psNand->bbt_td;
+	struct nand_bbt_descr *md = psNand->bbt_md;
+	int blockNum;
+	int chipNum;
+	int rsvBlock;
+	int physPageNum;
+	int ret;
+	uint8_t *buf = psNand->pBlockBuf;
+
+	blockNum = pageNum >> (psNand->bbt_erase_shift - psNand->page_shift);
+	chipNum = pageNum >> (psNand->chip_shift - psNand->page_shift);
+
+	ret = whatKindOfBlock(psMtd, blockNum);
+	if (ret > 0) {
+		return ret;
+	} else if (ret < 0) {
+		return -1;
+	}
+
+	physPageNum = bbt_translateBb(psMtd, pageNum & psNand->pagemask, chipNum);
+	setBbFlag(psMtd, physPageNum);
+
+	rsvBlock = getRsvBlock(psMtd, chipNum);
+	if (-1 == rsvBlock) {
+		return -1;
+	}
+
+	ret = registerAltBlock(psMtd, pageNum, rsvBlock);
+	if (ret) {
+		return -1;
+	}
+
+	td->version[chipNum]++;
+	if (md) {
+		md->version[chipNum]++;
+	}
+
+	ret = write_bbts(psMtd, buf, td, md, chipNum);
+	if (ret) {
+		return -1;
+	}
+
+	return 0;
+}
+
+//Substitute the alternate block for the valid block (before become bad block)
+//  after copying the all data to the alternate block
+//
+int bbt_replaceBb(struct mtd_info *psMtd, int pageNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct erase_info sEinfo;
+	u8 *pBlockBuf = psNand->pBlockBuf;
+	int blockNum;
+	int retPage, chipNum, phys_page, phys_block, block_mask;
+	int status;
+	flstate_t oldState;
+	loff_t phys_offset;
+	u32 *erased_map = psNand->erased_map;
+
+	blockNum = pageNum >> (psNand->bbt_erase_shift - psNand->page_shift);
+	chipNum = pageNum >> (psNand->chip_shift - psNand->page_shift);
+
+	status = whatKindOfBlock(psMtd, blockNum);
+	if (status < 0) {
+		return -1;
+	} else if (status != NAND_AREA_NORMAL) {
+		return status;
+	}
+
+	clear_erased_map(psNand);
+
+	status = readBlock(psMtd, blockNum, pBlockBuf, erased_map);
+	if (status) {
+		return -1;
+	}
+
+	while (1) {
+		status = bbt_alternateBb(psMtd, pageNum);
+		if (status) {
+			return -1;
+		}
+
+		phys_page = bbt_translateBb(psMtd, pageNum & psNand->pagemask, chipNum);
+		block_mask = ~((1 << (psNand->bbt_erase_shift - psNand->page_shift)) - 1);
+		phys_offset = (phys_page & block_mask) << psNand->page_shift;
+		phys_block = (int)(phys_offset >> psNand->bbt_erase_shift);
+
+		memset(&sEinfo, 0, sizeof(sEinfo));
+		sEinfo.mtd = psMtd;
+		sEinfo.addr = phys_offset;
+		sEinfo.len = 1 << psNand->bbt_erase_shift;
+		sEinfo.fail_addr = MTD_FAIL_ADDR_UNKNOWN;
+		oldState = psNand->state;
+		psNand->state = FL_ERASING;
+		status = nand_erase_nand(psMtd, &sEinfo, NAND_ALLOW_BBT);
+		psNand->state = oldState;
+		if (status) {
+			if (MTD_FAIL_ADDR_UNKNOWN == sEinfo.fail_addr) {
+				return -1;
+			}
+			continue;
+		}
+
+		status = bbt_write_programed_pages(psMtd, phys_block, pBlockBuf, erased_map, &retPage);
+		if (status) {
+			if (retPage == -1) {
+				return -1;
+			}
+			continue;
+		}
+		break;
+	}
+
+	return 0;
+}
+
+//Substitute the alternate block for the bad block
+//  after copying the data of bad block to the alternate block
+//
+int bbt_replaceBbExpOnePage(struct mtd_info *psMtd, int pageNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct erase_info sEinfo;
+	int blockNum;
+	int chipNum;
+	int phys_page, phys_block, block_mask;
+	loff_t phys_offset;
+	int retPage;
+	int status;
+	u8 *block_buf = psNand->pBlockBuf;
+	flstate_t oldState;
+	u32 *erased_map = psNand->erased_map;
+	int pages_per_block = 1 << (psNand->bbt_erase_shift - psNand->page_shift);
+	u32 page_offset = pageNum & (pages_per_block - 1);
+
+	blockNum = pageNum >> (psNand->bbt_erase_shift - psNand->page_shift);
+	chipNum = pageNum >> (psNand->chip_shift - psNand->page_shift);
+
+	status = whatKindOfBlock(psMtd, blockNum);
+	if (0 < status) {
+		return status;
+	} else if (0 > status) {
+		return -1;
+	}
+
+	clear_erased_map(psNand);
+
+	status = readBlockExpOnePage(psMtd, pageNum, block_buf, erased_map);
+	if (status) {
+		return -1;
+	}
+
+	/*
+	 * Set erased map becaouse this page don't copy.
+	 * This page is written after bad block replacement,
+	 */
+	set_bit_erased_map(page_offset, erased_map);
+
+	while (1) {
+		status = bbt_alternateBb(psMtd, pageNum);
+		if (status) {
+			return status;
+		}
+		phys_page = bbt_translateBb(psMtd, pageNum & psNand->pagemask, chipNum);
+		block_mask = ~((1 << (psNand->bbt_erase_shift - psNand->page_shift)) - 1);
+		phys_offset = (phys_page & block_mask) << psNand->page_shift;
+		phys_block = (int)(phys_offset >> psNand->bbt_erase_shift);
+
+		memset(&sEinfo, 0, sizeof(sEinfo));
+		sEinfo.mtd = psMtd;
+		sEinfo.addr = phys_offset;
+		sEinfo.len = 1 << psNand->bbt_erase_shift;
+		sEinfo.fail_addr = MTD_FAIL_ADDR_UNKNOWN;
+		oldState = psNand->state;
+		psNand->state = FL_ERASING;
+		status = nand_erase_nand(psMtd, &sEinfo, NAND_ALLOW_BBT);
+		psNand->state = oldState;
+		if (status) {
+			if (MTD_FAIL_ADDR_UNKNOWN == sEinfo.fail_addr) {
+				return -1;
+			}
+
+			continue;
+		}
+
+		status = bbt_write_programed_pages(psMtd, phys_block, block_buf, erased_map, &retPage);
+		if (status) {
+			if (-1 == retPage) {
+				return -1;
+			}
+			continue;
+		}
+		break;
+	}
+
+	return 0;
+}
+
+//Set the bad block flag on OOB of the block
+//  and register the bad block to BBM
+//  and save BBM
+//
+int bbt_registerBb(struct mtd_info *psMtd, int pageNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct nand_bbt_descr *td = psNand->bbt_td;
+	struct nand_bbt_descr *md = psNand->bbt_md;
+	int chipNum;
+	int blockNum;
+	uint8_t *buf = psNand->pBlockBuf;
+	int ret = 0;
+
+	blockNum = pageNum >> (psNand->bbt_erase_shift - psNand->page_shift);
+	chipNum = pageNum >> (psNand->chip_shift - psNand->page_shift);
+
+	ret = whatKindOfBlock(psMtd, blockNum);
+	switch (ret) {
+	case NAND_AREA_MAINTAIN:
+	case NAND_AREA_MASTER:
+	case NAND_AREA_MIRROR:
+		return -1;
+	case NAND_AREA_NORMAL:
+		bbt_replaceBb(psMtd, pageNum);
+		break;
+	case NAND_AREA_BOOT:
+		setBbFlag(psMtd, pageNum);
+		setBbMap(psMtd, blockNum);
+
+		td->version[chipNum]++;
+		if (md) {
+			md->version[chipNum]++;
+		}
+
+		ret = write_bbts(psMtd, buf, td, md, chipNum);
+		if (ret) {
+			return -1;
+		}
+		break;
+	default:
+		BUG();
+	}
+
+	return 0;
+}
+
+//Translate the address to the bad block into the address to the alternate block
+//
+int bbt_translateBb(struct mtd_info *psMtd, int virtPage, int chipNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct nand_bbList *psBbList;
+	struct nand_bbm *psBbm;
+	int blockNum;
+	int baseB;
+	u32 *pBbMap;
+	int kind;
+	u32 cnt;
+	int physPage;
+
+	virtPage += chipNum << (psNand->chip_shift - psNand->page_shift);
+
+	if (0 > virtPage) {
+		return virtPage;
+	}
+
+	psBbm = &psNand->psBbm[chipNum];
+
+	if (psBbm->usedMtBlocks == -1) {
+		return virtPage;
+	}
+
+	kind = whatKindOfBlock(psMtd, (virtPage >> (psNand->bbt_erase_shift - psNand->page_shift)));
+	if (NAND_AREA_NORMAL != kind) {
+		return virtPage;
+	}
+
+	pBbMap = psBbm->pBbMap;
+	blockNum = virtPage >> (psNand->bbt_erase_shift - psNand->page_shift);
+	baseB = (1 << (psNand->chip_shift - psNand->bbt_erase_shift)) * chipNum;
+	if (!(pBbMap[(blockNum - baseB) / 32] & (1 << ((blockNum - baseB) % 32)))) {
+		return virtPage;
+	}
+
+	psBbList = psBbm->psBbList;
+	for (cnt = 0; cnt < psBbm->altBlocks; cnt++) {
+		if (psBbList[cnt].badBlock == blockNum) {
+			break;
+		}
+	}
+	if (cnt >= psBbm->altBlocks) {
+		return virtPage;//BUG?
+	}
+
+	physPage = (psBbList[cnt].altBlock << (psNand->bbt_erase_shift - psNand->page_shift))
+		| (virtPage & ((1<<(psNand->bbt_erase_shift - psNand->page_shift)) - 1));
+
+	return physPage;
+}
+
+//Get the reserve block
+//
+static int getRsvBlock(struct mtd_info *psMtd, int chipNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct nand_bbm *psBbm = &psNand->psBbm[chipNum];
+	struct nand_bbt_descr *psTd = psNand->bbt_td;
+	s32 baseB;
+	s32 rsvStartB;
+	s32 rsvBlocks;
+	s32 usedRsvBlocks;
+	s32 direction;
+	u32 *pBbMap = psBbm->pBbMap;
+	u32 cnt;
+	s32 blockNum;
+	s32 chipBlocks = 1 << (psNand->chip_shift - psNand->bbt_erase_shift);
+
+	if (psBbm->usedMtBlocks == -1) {
+		return -1;
+	}
+
+	if (psBbm->mtBlocks <= psBbm->usedMtBlocks) {
+		return -1;
+	}
+
+	if (psTd->options & (NAND_BBT_FLEXIBLE | NAND_BBT_LASTBLOCK)) {
+		rsvStartB = psBbm->area[NAND_AREA_ID_ALT].startBlock +
+			psBbm->area[NAND_AREA_ID_ALT].blockNum - 1;
+		direction = -1;
+	} else {
+		rsvStartB = psBbm->area[NAND_AREA_ID_ALT].startBlock;
+		direction = 1;
+	}
+
+	blockNum = -1;
+	baseB = chipBlocks * chipNum;
+	rsvBlocks = psBbm->area[NAND_AREA_ID_ALT].blockNum;
+	usedRsvBlocks = psBbm->usedMtBlocks - psBbm->area[NAND_AREA_ID_BBM].blockNum;
+	for (cnt = usedRsvBlocks; cnt < rsvBlocks; cnt++) {
+		blockNum = rsvStartB + direction * cnt;
+
+		if (!(pBbMap[(blockNum - baseB) / 32] & (1 << ((blockNum - baseB) % 32)))) {
+			break;
+		}
+		psBbm->usedMtBlocks++;
+	}
+	if (psBbm->usedMtBlocks >= psBbm->mtBlocks) {
+		return -1;
+	}
+
+	return blockNum;
+}
+
+//Confirm the kind of the block
+//
+static int whatKindOfBlock(struct mtd_info *psMtd, int blockNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct nand_bbm *psBbm;
+	s32 chipNum;
+	s32 startB, endB;
+	s32 pageNum;
+
+	chipNum = blockNum >> (psNand->chip_shift - psNand->bbt_erase_shift);
+	pageNum = blockNum << (psNand->bbt_erase_shift - psNand->page_shift);
+	psBbm = &psNand->psBbm[chipNum];
+
+	if (psBbm->usedMtBlocks == -1) {
+		return -1;
+	}
+
+	if (pageNum == psNand->bbt_td->pages[chipNum]) {
+		return NAND_AREA_MASTER;
+	}
+
+	if (pageNum == psNand->bbt_md->pages[chipNum]) {
+		return NAND_AREA_MIRROR;
+	}
+
+	startB = psBbm->area[NAND_AREA_ID_BBM].startBlock;
+	endB = startB + psBbm->area[NAND_AREA_ID_BBM].blockNum;
+	if (blockNum >= startB && blockNum < endB) {
+		return NAND_AREA_MAINTAIN;
+	}
+
+	startB = psBbm->area[NAND_AREA_ID_ALT].startBlock;
+	endB = startB + psBbm->area[NAND_AREA_ID_ALT].blockNum;
+	if (blockNum >= startB && blockNum < endB) {
+		return NAND_AREA_MAINTAIN;
+	}
+
+	startB = psBbm->area[NAND_AREA_ID_BOOT].startBlock;
+	endB = startB + psBbm->area[NAND_AREA_ID_BOOT].blockNum;
+	if (blockNum >= startB && blockNum < endB) {
+		return NAND_AREA_BOOT;
+	}
+
+	return NAND_AREA_NORMAL;
+}
+
+//Register the alt block to BBM
+//
+static int registerAltBlock(struct mtd_info *psMtd, int pageNum, int rsvBlock)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct nand_bbm *psBbm;
+	struct nand_bbList *psBbList;
+	u32 *pBbMap;
+	int blockNum;
+	int chipNum;
+	int baseB;
+	u32 cnt;
+
+	blockNum = pageNum >> (psNand->bbt_erase_shift - psNand->page_shift);
+	chipNum = pageNum >> (psNand->chip_shift - psNand->page_shift);
+	psBbm = &psNand->psBbm[chipNum];
+	psBbList = psBbm->psBbList;
+	pBbMap = psBbm->pBbMap;
+
+	if (psBbm->usedMtBlocks == -1) {
+		return -1;
+	}
+
+	baseB = (1 << (psNand->chip_shift - psNand->bbt_erase_shift)) * chipNum;
+
+	if (pBbMap[(blockNum - baseB) / 32] & (1 << ((blockNum - baseB) % 32))) {
+		for (cnt = 0; cnt < psBbm->altBlocks; cnt++) {
+			if (psBbList[cnt].badBlock == blockNum) {
+				break;
+			}
+		}
+		if (cnt >= psBbm->altBlocks) {
+			BUG();
+		}
+		setBbMap(psMtd, psBbList[cnt].altBlock);
+		psBbList[cnt].altBlock = rsvBlock;
+		psBbm->usedMtBlocks++;
+	} else {
+		setBbMap(psMtd, blockNum);
+		psBbList[psBbm->altBlocks].badBlock = blockNum;
+		psBbList[psBbm->altBlocks].altBlock = rsvBlock;
+		psBbm->altBlocks++;
+		psBbm->usedMtBlocks++;
+	}
+
+	return 0;
+}
+
+//Register the bad block to Bad Block bitmap
+//
+static int setBbMap(struct mtd_info *psMtd, int blockNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	struct nand_bbm *psBbm;
+	u32 *pBbMap;
+	int chipNum;
+	int baseB;
+
+	chipNum = blockNum >> (psNand->chip_shift - psNand->bbt_erase_shift);
+	psBbm = &psNand->psBbm[chipNum];
+	pBbMap = psBbm->pBbMap;
+
+	baseB = (1 << (psNand->chip_shift - psNand->bbt_erase_shift)) * chipNum;
+
+	pBbMap[(blockNum - baseB) / 32] |= (1 << ((blockNum - baseB) % 32));
+
+	return 0;
+}
+
+//Copy the data of the bad block except the page caused the bad block
+//
+static int readBlockExpOnePage(struct mtd_info *psMtd, int pageNum, u8 *pBlockBuf, u32 *erased_map)
+{
+	return readBlockExpSpecifiedPage(psMtd, pageNum, 1, pBlockBuf, erased_map);
+}
+
+//Read all pages in the block
+//
+static int readBlock(struct mtd_info *psMtd, int block, u8 *block_buf, u32 *erased_map)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	loff_t from;
+	int status, i;
+	flstate_t oldState;
+	struct mtd_oob_ops sOps;
+	int pages_per_block = 1 << (psNand->bbt_erase_shift - psNand->page_shift);
+	int block_top_page = pages_per_block * block;
+	u32 block_buf_size = (psMtd->writesize + psMtd->oobsize) * pages_per_block;
+	u8 *datbuf_base = block_buf;
+	u8 *oobbuf_base = block_buf + psMtd->erasesize;
+
+	memset(block_buf, 0xff, block_buf_size);
+
+	oldState = psNand->state;
+	psNand->state = FL_READING;
+	sOps.mode = MTD_OPS_AUTO_OOB;
+	sOps.len = (size_t)psMtd->writesize;
+	sOps.ooblen = psMtd->oobavail;
+	sOps.ooboffs = 0;
+
+	for (i = 0; i < pages_per_block; i++) {
+		from = (block_top_page + i) << psNand->page_shift;
+		sOps.retlen = 0;
+		sOps.oobretlen = 0;
+		sOps.datbuf = datbuf_base + (psMtd->writesize * i);
+		sOps.oobbuf = oobbuf_base + (psMtd->oobavail * i);
+
+		status = psNand->fReadOps(psMtd, from, &sOps);
+		if ((status && (status != -EUCLEAN)) || (sOps.len != sOps.retlen)) {
+			psNand->state = oldState;
+			return -1;
+		}
+	}
+	psNand->state = oldState;
+
+	return 0;
+}
+
+//Set the bad block flag on OOB
+//
+static int setBbFlag(struct mtd_info *psMtd, int pageNum)
+{
+	struct nand_chip *psNand = psMtd->priv;
+	loff_t to;
+	u8 aBuf[2] = {0, 0};
+	int status, i = 0;
+	flstate_t oldState;
+	struct mtd_oob_ops sOps;
+
+	to = (pageNum >> (psNand->bbt_erase_shift - psNand->page_shift)) <<
+		psNand->bbt_erase_shift;
+	oldState = psNand->state;
+	psNand->state = FL_WRITING;
+
+	memset(&sOps, 0, sizeof(sOps));
+	sOps.mode = MTD_OPS_RAW;
+	sOps.ooblen = 2;
+	sOps.oobbuf = aBuf;
+
+	for (i = 0; i < 2; i++) {
+		sOps.oobretlen = 0;
+		sOps.retPage = -1;
+		status = psNand->fWriteOob(psMtd, to, &sOps);
+		if (sOps.oobretlen != 2) {
+			return -1;
+		}
+		to += psMtd->writesize;
+	}
+	psNand->state = oldState;
+
+	return status;
+}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 EXPORT_SYMBOL(nand_scan_bbt);

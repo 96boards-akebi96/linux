@@ -97,6 +97,23 @@ static int nand_get_device(struct mtd_info *mtd, int new_state);
 static int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
 			     struct mtd_oob_ops *ops);
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+static int is_first_page_in_block(struct mtd_info *mtd, int page)
+{
+	struct nand_chip *chip = mtd->priv;
+	int pages = 1 << (chip->phys_erase_shift - chip->page_shift);
+	unsigned int mask = pages - 1;
+
+	if (page < 0) {
+		pr_err("%s called with invalid argument. page is too large.",
+		       __func__);
+		BUG();
+	}
+
+	return (unsigned int)page & mask ? 0 : 1;
+}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 /*
  * For devices which display every fart in the system on a separate LED. Is
  * compiled away when LED support is disabled.
@@ -319,6 +336,12 @@ static void nand_read_buf16(struct mtd_info *mtd, uint8_t *buf, int len)
  */
 static int nand_block_bad(struct mtd_info *mtd, loff_t ofs, int getchip)
 {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	pr_err("##** %s, %s, %d **##\n", __FILE__, __func__, __LINE__);
+	BUG();
+
+	return -1;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int page, chipnr, res = 0, i = 0;
 	struct nand_chip *chip = mtd->priv;
 	u16 bad;
@@ -367,6 +390,7 @@ static int nand_block_bad(struct mtd_info *mtd, loff_t ofs, int getchip)
 	}
 
 	return res;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /**
@@ -380,6 +404,12 @@ static int nand_block_bad(struct mtd_info *mtd, loff_t ofs, int getchip)
  */
 static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	pr_err("##** %s, %s, %d **##\n", __FILE__, __func__, __LINE__);
+	BUG();
+
+	return -1;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	struct nand_chip *chip = mtd->priv;
 	struct mtd_oob_ops ops;
 	uint8_t buf[2] = { 0, 0 };
@@ -409,6 +439,7 @@ static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	} while ((chip->bbt_options & NAND_BBT_SCAN2NDPAGE) && i < 2);
 
 	return ret;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /**
@@ -430,6 +461,16 @@ static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 */
 static int nand_block_markbad_lowlevel(struct mtd_info *mtd, loff_t ofs)
 {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	struct nand_chip *chip = mtd->priv;
+	int status;
+
+	nand_get_device(mtd, FL_WRITING);
+	status = bbt_registerBb(mtd, ofs >> (chip->page_shift));
+	nand_release_device(mtd);
+
+	return status;
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	struct nand_chip *chip = mtd->priv;
 	int res, ret = 0;
 
@@ -460,6 +501,7 @@ static int nand_block_markbad_lowlevel(struct mtd_info *mtd, loff_t ofs)
 		mtd->ecc_stats.badblocks++;
 
 	return ret;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /**
@@ -512,10 +554,12 @@ static int nand_block_isreserved(struct mtd_info *mtd, loff_t ofs)
 static int nand_block_checkbad(struct mtd_info *mtd, loff_t ofs, int getchip,
 			       int allowbbt)
 {
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	struct nand_chip *chip = mtd->priv;
 
 	if (!chip->bbt)
 		return chip->block_bad(mtd, ofs, getchip);
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	/* Return info from the table */
 	return nand_isbad_bbt(mtd, ofs, allowbbt);
@@ -1723,6 +1767,12 @@ static int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 		else
 			use_bufpoi = 0;
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+		if (is_first_page_in_block(mtd, page)) {
+			clear_erased_map(chip);
+		}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 		/* Is the current page in the buffer? */
 		if (realpage != chip->pagebuf || oob) {
 			bufpoi = use_bufpoi ? chip->buffers->databuf : buf;
@@ -2415,9 +2465,15 @@ static int nand_write_page_syndrome(struct mtd_info *mtd,
  * @cached: cached programming
  * @raw: use _raw version of write_page
  */
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+static int nand_write_page(struct mtd_info *mtd, struct nand_chip *chip,
+		uint32_t offset, int data_len, const uint8_t *buf,
+		int oob_required, int page, int cached, int raw, int *pRetPage)
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 static int nand_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 		uint32_t offset, int data_len, const uint8_t *buf,
 		int oob_required, int page, int cached, int raw)
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 {
 	int status, subpage;
 
@@ -2460,8 +2516,12 @@ static int nand_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 			status = chip->errstat(mtd, chip, FL_WRITING, status,
 					       page);
 
-		if (status & NAND_STATUS_FAIL)
+		if (status & NAND_STATUS_FAIL) {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+			*pRetPage = page;
+#endif
 			return -EIO;
+		}
 	} else {
 		chip->cmdfunc(mtd, NAND_CMD_CACHEDPROG, -1, -1);
 		status = chip->waitfunc(mtd, chip);
@@ -2624,11 +2684,23 @@ static int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 			/* We still need to erase leftover OOB data */
 			memset(chip->oob_poi, 0xff, mtd->oobsize);
 		}
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+		ret = chip->write_page(mtd, chip, column, bytes, wbuf,
+					oob_required, page, cached,
+				       (ops->mode == MTD_OPS_RAW), &ops->retPage);
+		if (ret) {
+			if (ops->retPage != -1) {
+				ops->retPage = realpage;
+			}
+			break;
+		}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 		ret = chip->write_page(mtd, chip, column, bytes, wbuf,
 					oob_required, page, cached,
 					(ops->mode == MTD_OPS_RAW));
 		if (ret)
 			break;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 		writelen -= bytes;
 		if (!writelen)
@@ -2678,6 +2750,29 @@ static int panic_nand_write(struct mtd_info *mtd, loff_t to, size_t len,
 	/* Grab the device */
 	panic_nand_get_device(chip, mtd, FL_WRITING);
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	while (1) {
+		int status;
+
+		memset(&ops, 0, sizeof(ops));
+		ops.len = len;
+		ops.datbuf = (uint8_t *)buf;
+		ops.mode = MTD_OPS_PLACE_OOB;
+		ops.retPage = -1;
+
+		ret = nand_do_write_ops(mtd, to, &ops);
+		if (ops.retPage == -1) {
+			break;
+		}
+
+		status = bbt_replaceBbExpOnePage(mtd, ops.retPage);
+		if (0 < status) {
+			break;
+		} else if (0 > status) {
+			BUG();
+		}
+	}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	chip->select_chip(mtd, chipnr);
 
 	/* Wait for the device to get ready */
@@ -2689,6 +2784,7 @@ static int panic_nand_write(struct mtd_info *mtd, loff_t to, size_t len,
 	ops.mode = MTD_OPS_PLACE_OOB;
 
 	ret = nand_do_write_ops(mtd, to, &ops);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	*retlen = ops.retlen;
 	return ret;
@@ -2711,11 +2807,35 @@ static int nand_write(struct mtd_info *mtd, loff_t to, size_t len,
 	int ret;
 
 	nand_get_device(mtd, FL_WRITING);
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	while(1) {
+		int status;
+
+		memset(&ops, 0, sizeof(ops));
+		ops.len = len;
+		ops.datbuf = (uint8_t *)buf;
+		ops.mode = MTD_OPS_PLACE_OOB;
+		ops.retPage = -1;
+
+		ret = nand_do_write_ops(mtd, to, &ops);
+		if (ops.retPage == -1) {
+			break;
+		}
+
+		status = bbt_replaceBbExpOnePage(mtd, ops.retPage);
+		if (status > 0) {
+			break;
+		} else if (status < 0) {
+			BUG();
+		}
+	}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	memset(&ops, 0, sizeof(ops));
 	ops.len = len;
 	ops.datbuf = (uint8_t *)buf;
 	ops.mode = MTD_OPS_PLACE_OOB;
 	ret = nand_do_write_ops(mtd, to, &ops);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	*retlen = ops.retlen;
 	nand_release_device(mtd);
 	return ret;
@@ -2799,8 +2919,12 @@ static int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
 
 	chip->select_chip(mtd, -1);
 
-	if (status)
+	if (status) {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+		ops->retPage = page;
+#endif
 		return status;
+	}
 
 	ops->oobretlen = ops->ooblen;
 
@@ -2839,10 +2963,34 @@ static int nand_write_oob(struct mtd_info *mtd, loff_t to,
 		goto out;
 	}
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	while (1) {
+		int status;
+
+		ops->retPage = -1;
+		if (!ops->datbuf) {
+			ret = nand_do_write_oob(mtd, to, ops);
+		} else {
+			ret = nand_do_write_ops(mtd, to, ops);
+		}
+
+		if (ops->retPage == -1) {
+			break;
+		}
+
+		status = bbt_replaceBbExpOnePage(mtd, ops->retPage);
+		if (status > 0) {
+			break;
+		} else if (status < 0) {
+			BUG();
+		}
+	}
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	if (!ops->datbuf)
 		ret = nand_do_write_oob(mtd, to, ops);
 	else
 		ret = nand_do_write_ops(mtd, to, ops);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 out:
 	nand_release_device(mtd);
@@ -2875,7 +3023,52 @@ static int single_erase(struct mtd_info *mtd, int page)
  */
 static int nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 {
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int ret;
+	struct nand_chip *chip = mtd->priv;
+
+	pr_debug("%s: start = 0x%012llx, len = %llu\n",
+			__func__, (unsigned long long)instr->addr,
+			(unsigned long long)instr->len);
+
+	if (check_offs_len(mtd, instr->addr, instr->len))
+		return -EINVAL;
+
+	/* Grab the lock and see if the device is available */
+	nand_get_device(mtd, FL_ERASING);
+
+	while (1) {
+		int ret2;
+
+		ret = nand_erase_nand(mtd, instr, 0);
+		if (MTD_FAIL_ADDR_UNKNOWN ==  instr->fail_addr) {
+			break;
+		}
+
+		ret2 = bbt_alternateBb(mtd,
+				       (instr->fail_addr >> chip->page_shift));
+		if (ret2 > 0) {
+			break;
+		} else if (ret2 < 0) {
+			BUG();
+		}
+
+		instr->fail_addr = MTD_FAIL_ADDR_UNKNOWN;
+	}
+
+	/* Deselect and wake up anyone waiting on the device */
+	chip->select_chip(mtd, -1);
+	nand_release_device(mtd);
+
+	/* Do call back function */
+	if (!ret)
+		mtd_erase_callback(instr);
+
+	return ret;
+
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	return nand_erase_nand(mtd, instr, 0);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /**
@@ -2893,6 +3086,7 @@ int nand_erase_nand(struct mtd_info *mtd, struct erase_info *instr,
 	struct nand_chip *chip = mtd->priv;
 	loff_t len;
 
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	pr_debug("%s: start = 0x%012llx, len = %llu\n",
 			__func__, (unsigned long long)instr->addr,
 			(unsigned long long)instr->len);
@@ -2902,6 +3096,7 @@ int nand_erase_nand(struct mtd_info *mtd, struct erase_info *instr,
 
 	/* Grab the lock and see if the device is available */
 	nand_get_device(mtd, FL_ERASING);
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	/* Shift to get first page */
 	page = (int)(instr->addr >> chip->page_shift);
@@ -2981,6 +3176,7 @@ erase_exit:
 
 	ret = instr->state == MTD_ERASE_DONE ? 0 : -EIO;
 
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	/* Deselect and wake up anyone waiting on the device */
 	chip->select_chip(mtd, -1);
 	nand_release_device(mtd);
@@ -2988,6 +3184,7 @@ erase_exit:
 	/* Do call back function */
 	if (!ret)
 		mtd_erase_callback(instr);
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	/* Return more or less happy */
 	return ret;
@@ -3026,6 +3223,7 @@ static int nand_block_isbad(struct mtd_info *mtd, loff_t offs)
  */
 static int nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 {
+#ifndef CONFIG_MTD_NAND_UNIPHIER_BBM
 	int ret;
 
 	ret = nand_block_isbad(mtd, ofs);
@@ -3035,6 +3233,7 @@ static int nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 			return 0;
 		return ret;
 	}
+#endif /* !CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	return nand_block_markbad_lowlevel(mtd, ofs);
 }
@@ -3172,6 +3371,16 @@ static void nand_set_defaults(struct nand_chip *chip, int busw)
 		init_waitqueue_head(&chip->controller->wq);
 	}
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	if (!chip->fReadOps)
+		chip->fReadOps = nand_do_read_ops;
+	if (!chip->fWriteOps)
+		chip->fWriteOps = nand_do_write_ops;
+	if (!chip->fReadOob)
+		chip->fReadOob = nand_do_read_oob;
+	if (!chip->fWriteOob)
+		chip->fWriteOob = nand_do_write_oob;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 }
 
 /* Sanitize ONFI strings so we can safely print them */

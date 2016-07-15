@@ -662,9 +662,24 @@ struct nand_chip {
 	int (*scan_bbt)(struct mtd_info *mtd);
 	int (*errstat)(struct mtd_info *mtd, struct nand_chip *this, int state,
 			int status, int page);
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	int (*write_page)(struct mtd_info *mtd, struct nand_chip *chip,
+			  uint32_t offset, int data_len, const uint8_t *buf,
+			  int oob_required, int page, int cached, int raw,
+			  int *pRetPage);
+	int (*fWriteOps)(struct mtd_info *mtd, loff_t to,
+			 struct mtd_oob_ops *ops);
+	int (*fWriteOob)(struct mtd_info *mtd, loff_t to,
+			 struct mtd_oob_ops *ops);
+	int (*fReadOps)(struct mtd_info *mtd, loff_t from,
+			struct mtd_oob_ops *ops);
+	int (*fReadOob)(struct mtd_info *mtd, loff_t from,
+			struct mtd_oob_ops *ops);
+#else /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int (*write_page)(struct mtd_info *mtd, struct nand_chip *chip,
 			uint32_t offset, int data_len, const uint8_t *buf,
 			int oob_required, int page, int cached, int raw);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 	int (*onfi_set_features)(struct mtd_info *mtd, struct nand_chip *chip,
 			int feature_addr, uint8_t *subfeature_para);
 	int (*onfi_get_features)(struct mtd_info *mtd, struct nand_chip *chip,
@@ -713,10 +728,20 @@ struct nand_chip {
 	uint8_t *bbt;
 	struct nand_bbt_descr *bbt_td;
 	struct nand_bbt_descr *bbt_md;
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	struct nand_bbt_descr *bbt_flag;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 	struct nand_bbt_descr *badblock_pattern;
 
 	void *priv;
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+	u8 *pBbmBuf;
+	struct nand_bbm *psBbm;
+	u32 *erased_map;
+	u8 *pBlockBuf;
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 };
 
 /*
@@ -841,6 +866,34 @@ extern int nand_erase_nand(struct mtd_info *mtd, struct erase_info *instr,
 extern int nand_do_read(struct mtd_info *mtd, loff_t from, size_t len,
 			size_t *retlen, uint8_t *buf);
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+#define NAND_ALLOW_NONE		0x00
+#define NAND_ALLOW_BBT		0x01
+#define NAND_ALLOW_BADDATA	0x02
+extern int bbt_registerBb(struct mtd_info *psMtd, int pageNum);
+extern int bbt_replaceBbExpOnePage(struct mtd_info *psMtd, int pageNum);
+extern int bbt_alternateBb(struct mtd_info *psMtd, int pageNum);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+static inline void clear_erased_map(struct nand_chip *this)
+{
+	int pages_per_block = 1 << (this->bbt_erase_shift - this->page_shift);
+	size_t size = DIV_ROUND_UP(pages_per_block, 32) * sizeof(u32);
+	memset(this->erased_map, 0, size);
+}
+
+static inline void set_bit_erased_map(int page, u32 *erased_map)
+{
+	erased_map[page / 32] |= (1 << (page % 32));
+}
+
+static u32 inline is_bit_set_erased_map(int page, u32 *erased_map)
+{
+	return erased_map[page / 32] & (1 << (page % 32));
+}
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 /**
  * struct platform_nand_chip - chip level device structure
  * @nr_chips:		max. number of chips to scan for
@@ -947,6 +1000,48 @@ static inline bool nand_is_slc(struct nand_chip *chip)
 {
 	return chip->bits_per_cell == 1;
 }
+
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+
+#define NAND_AREA_NORMAL	0
+#define NAND_AREA_MASTER	1
+#define NAND_AREA_MIRROR	2
+#define NAND_AREA_MAINTAIN	3
+#define NAND_AREA_BOOT		4
+
+#define NAND_BBM_BLOCK_NUM	2 /* cannot change */
+
+/* Area ID */
+#define NAND_AREA_ID_NUM	4
+#define NAND_AREA_ID_BOOT	0
+#define NAND_AREA_ID_DATA	1
+#define NAND_AREA_ID_ALT	2
+#define NAND_AREA_ID_BBM	3
+
+struct nand_bbt_area_info{
+       s32 startBlock;
+       s32 blockNum;
+};
+
+struct nand_bbList{
+       u32 badBlock;
+       u32 altBlock;
+};
+
+struct nand_bbm{
+       s32 mtBlocks;
+       s32 bbMapSize;
+       s32 bbListSize;
+       s32 bbmPages;
+       s32 usedMtBlocks;
+       s32 altBlocks;
+       u32 *pBbMap;
+       struct nand_bbList *psBbList;
+       struct nand_bbt_area_info *area;
+};
+
+extern int bbt_translateBb(struct mtd_info *psMtd, int virtPage, int chipNum);
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
 
 /**
  * Check if the opcode's address should be sent only on the lower 8 bits

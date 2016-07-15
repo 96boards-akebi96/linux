@@ -115,6 +115,11 @@ struct nand_bbt_descr {
  */
 #define NAND_BBT_NO_OOB_BBM	0x00080000
 
+#ifdef CONFIG_MTD_NAND_UNIPHIER_BBM
+/* The bad block table is in the last good block of the device */
+#define NAND_BBT_FLEXIBLE	0x40000000
+#endif /* CONFIG_MTD_NAND_UNIPHIER_BBM */
+
 /*
  * Flag set by nand_create_default_bbt_descr(), marking that the nand_bbt_descr
  * was allocated dynamicaly and must be freed in nand_release(). Has no meaning

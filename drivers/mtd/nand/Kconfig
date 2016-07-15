@@ -550,4 +550,16 @@ config MTD_NAND_HISI504
 	help
 	  Enables support for NAND controller on Hisilicon SoC Hip04.
 
+config MTD_NAND_UNIPHIER
+	tristate "Support for Uniphier NAND controller"
+	depends on ARCH_UNIPHIER
+	help
+	  Enables support for Uniphier NAND controller.
+
+config MTD_NAND_UNIPHIER_BBM
+	tristate "Enables Bad Block Management for Uniphier NAND controller"
+	depends on MTD_NAND_UNIPHIER
+	help
+	  Use Bad Block Management for Uniphier NAND controller.
+
 endif # MTD_NAND
