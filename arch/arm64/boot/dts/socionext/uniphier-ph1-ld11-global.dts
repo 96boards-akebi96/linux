@@ -106,3 +106,26 @@
 &usb2 {
 	status = "okay";
 };
+
+&nand {
+	status = "okay";
+
+	/* setting for nand bad block management */
+	boot_block_bank0 = <8>;
+	boot_block_bank1 = <0>;
+	alt_block_bank0 = <126>;
+	alt_block_bank1 = <0>;
+	nand-on-flash-bbt;
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@0 {
+			label = "total area";
+			reg = <0x0 0x40000000>;
+		};
+	};
+};
+

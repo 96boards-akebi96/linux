@@ -505,6 +505,15 @@
 			compatible = "socionext,uniphier-wdt";
 			reg = <0x61843000 0x1000>;
 		};
+
+		nand: nand@68000000 {
+			compatible = "socionext,uniphier-nand";
+			reg = <0x68000000 0x20>, <0x68100000 0x1000>;
+			reg-names = "nand_data", "nand_reg";
+			interrupts = <0 65 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_nand>;
+		};
 	};
 };
 
