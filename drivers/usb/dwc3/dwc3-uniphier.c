@@ -418,8 +418,43 @@ static const struct dwc3_uniphier_priv_t dwc3_uniphier_priv_data_ld20 = {
 
 static void ss_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int ss_instances)
 {
-	/* No setup needed */
+	int i;
+	void __iomem *vptr_i, *vptr_o;
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+
+	for(i=0; i < ss_instances; i++) {
+		vptr_i = dwc3u->base + priv->u3phy_testi_reg + (i * 0x10);
+		vptr_o = dwc3u->base + priv->u3phy_testo_reg + (i * 0x10);
+
+		/* parameter number 07, 13, 26 */
+		pphy_test_io(vptr_i, vptr_o,  7, 0xff, 0x06);
+		pphy_test_io(vptr_i, vptr_o, 13, 0xff, 0xcc);
+		pphy_test_io(vptr_i, vptr_o, 26, 0xff, 0x50);
+	}
+
 	return;
+}
+
+static inline void hs_phy_int_param_set(void __iomem *vptr,
+					u32 addr, u32 data)
+{
+	u32 tmp_data;
+
+	tmp_data = readl(vptr);
+
+	/* set the internal parameter number */
+	tmp_data = (tmp_data & 0x0000ffff) | (0x1 << 28) | ((addr & 0xfff) << 16);
+	writel(tmp_data, vptr);
+
+	tmp_data = (tmp_data & 0x0000ffff) | ((addr & 0xfff) << 16);
+	writel(tmp_data, vptr);
+
+	/* set the internal parameter data */
+	tmp_data = (tmp_data & 0x0000ffff) | (0x1 << 29) | ((data & 0xff) << 16);
+	writel(tmp_data, vptr);
+
+	tmp_data = (tmp_data & 0x0000ffff) | ((data & 0xff) << 16);
+	writel(tmp_data, vptr);
 }
 
 static void hs_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int hs_instances)
@@ -499,6 +534,14 @@ static void hs_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int hs_instances)
 		writel(hs_phy_cfgl, hs_phy_addr);
 		hs_phy_addr = dwc3u->base + priv->u2phy_cfg1_reg + (i * 0x10);
 		writel(hs_phy_cfgh, hs_phy_addr);
+	}
+
+	/* set the internal parameter value */
+	for (i=0; i < hs_instances; i++) {
+		hs_phy_addr = dwc3u->base + priv->u2phy_cfg1_reg + (i * 0x10);
+
+		/* parameter number 10 */
+		hs_phy_int_param_set(hs_phy_addr, 10, 0x60);
 	}
 
 	return;
