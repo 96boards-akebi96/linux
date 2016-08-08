@@ -2290,6 +2290,13 @@ static int uart_poll_init(struct tty_driver *driver, int line, char *options)
 	if (!(port->ops->poll_get_char && port->ops->poll_put_char))
 		return -1;
 
+	if (!port->uartclk) {
+		dev_err(port->dev, "%s%d: Unable to get uartclk\n",
+				drv->dev_name,
+				drv->tty_driver->name_base + port->line);
+		return -1;
+	}
+
 	if (port->ops->poll_init) {
 		struct tty_port *tport = &state->port;
 

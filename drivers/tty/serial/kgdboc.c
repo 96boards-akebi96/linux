@@ -212,6 +212,7 @@ do_register:
 nmi_con_failed:
 	kgdb_unregister_io_module(&kgdboc_io_ops);
 noconfig:
+	pr_err("kgdboc: Unable to configure with '%s'\n", config);
 	kgdboc_unregister_kbd();
 	config[0] = 0;
 	configured = 0;
