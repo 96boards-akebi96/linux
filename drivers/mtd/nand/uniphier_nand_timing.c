@@ -69,12 +69,10 @@ struct nand_gpbc_timing *nand_gpbc_get_timing(struct nand_gpbc_info *gpbc)
 		if(mode < 0)
 			mode = 0;
 	} else {
-		pr_warn("\n\n## Warning ## %s %s %d: Can't find AC timing. ##\n\n",
-		         __FILE__, __func__, __LINE__);
-		mode = 0;
+		mode = chip->onfi_timing_mode_default;
 	}
 
-	pr_info("[uniphier_nand] ONFI timing mode: %d\n", mode);
+	pr_info("[uniphier-nand] ONFI timing mode: %d\n", mode);
 
 	return (struct nand_gpbc_timing *)&nand_timing_lists[mode];
 }

@@ -28,6 +28,7 @@
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/of.h>
+#include <linux/sizes.h>
 
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
@@ -112,6 +113,14 @@ static const struct nand_soc_flags_table soc_flags_table[] = {
 	    .set_ndb     = 1, .ddma_comp_fix  = 1
 	  }
 	},
+};
+
+struct nand_flash_dev nand_gpbc_nand_flash_ids[] = {
+	{"TC58NVG2S0HTA00 4G 3.3V 8-bit",
+		{ .id = {0x98, 0xdc, 0x90, 0x26, 0x76} },
+		  SZ_4K, SZ_512, SZ_256K, 0, 5, 256,
+		  NAND_ECC_INFO(8, SZ_512), 4 },
+	{NULL}
 };
 
 /* this macro allows us to convert from an MTD structure to our own
@@ -388,7 +397,7 @@ static int nand_gpbc_isErasedPageEcc(struct nand_gpbc_info *gpbc, int page, u8 *
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bank_sel | NAND_GPBC_MAP11_ADR, 0);
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bank_sel | NAND_GPBC_MAP11_ADR, bankPage & 0xff);
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bank_sel | NAND_GPBC_MAP11_ADR, (bankPage >> 8) & 0xff);
-	if(chip->onfi_params.addr_cycles == 0x23) {
+	if(!nand_gpbc_read32(gpbc->regBase + NAND_GPBC_NTRADC)) {
 		nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bank_sel | NAND_GPBC_MAP11_ADR, (bankPage >> 16) & 0xff);
 	}
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bank_sel | NAND_GPBC_MAP11_CMD, NAND_CMD_READSTART);
@@ -655,7 +664,7 @@ static u32 nand_gpbc_readPageAllRaw(struct nand_gpbc_info *gpbc,
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, 0);
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, bankPage & 0xff);
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, (bankPage >> 8) & 0xff);
-	if(chip->onfi_params.addr_cycles == 0x23) {
+	if(!nand_gpbc_read32(gpbc->regBase + NAND_GPBC_NTRADC)) {
 		nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, (bankPage >> 16) & 0xff);
 	}
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_CMD, NAND_CMD_READSTART);
@@ -832,7 +841,7 @@ static int nand_gpbc_writePageAllRaw(struct nand_gpbc_info *gpbc,
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, 0);
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, bankPage & 0xff);
 	nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, (bankPage >> 8) & 0xff);
-	if(chip->onfi_params.addr_cycles == 0x23) {
+	if(!nand_gpbc_read32(gpbc->regBase + NAND_GPBC_NTRADC)) {
 		nand_gpbc_index32(gpbc, NAND_GPBC_MAP11 | bankSel | NAND_GPBC_MAP11_ADR, (bankPage >> 16) & 0xff);
 	}
 	for (cnt = 0; cnt < mtd->writesize + mtd->oobsize; cnt += 4) {
@@ -1246,7 +1255,14 @@ static void nand_gpbc_initHw2(struct nand_gpbc_info *gpbc)
 	}
 
 	/* Set MANUFACTURE_ID */
-	nand_gpbc_write32(chip->onfi_params.jedec_id, gpbc->regBase + NAND_GPBC_NMID);
+	if(chip->onfi_version) {
+		nand_gpbc_write32(chip->onfi_params.jedec_id, gpbc->regBase + NAND_GPBC_NMID);
+	} else {
+		chip->select_chip(mtd, 0);
+		chip->cmdfunc(mtd, NAND_CMD_READID, 0x00, -1);
+		temp32 = chip->read_byte(mtd);
+		nand_gpbc_write32(temp32, gpbc->regBase + NAND_GPBC_NMID);
+	}
 
 	/* Set DEVICE_WIDTH */
 	if (!(chip->options & NAND_BUSWIDTH_16)) {
@@ -1262,8 +1278,13 @@ static void nand_gpbc_initHw2(struct nand_gpbc_info *gpbc)
 
 	/* Set Address cycle */
 	temp32 = 0;
-	if(chip->onfi_params.addr_cycles == 0x22) {
-		temp32 = NAND_GPBC_NTRADC__TRADC;
+	if(chip->onfi_version) {
+		if(chip->onfi_params.addr_cycles == 0x22) {
+			temp32 = NAND_GPBC_NTRADC__TRADC;
+		}
+	} else {
+		/* You refer to datesheet and need to set address cycle */
+		/* temp32 = NAND_GPBC_NTRADC__TRADC; */
 	}
 	nand_gpbc_write32(temp32, gpbc->regBase + NAND_GPBC_NTRADC);
 
@@ -1600,7 +1621,7 @@ static int nand_gpbc_probe(struct platform_device *dev)
 		return -ENOMEM;
 	}
 
-	err = nand_scan_ident(&gpbc->mtd, NAND_GPBC_FLASH_BANKS, NULL);
+	err = nand_scan_ident(&gpbc->mtd, NAND_GPBC_FLASH_BANKS, nand_gpbc_nand_flash_ids);
 	if (err) {
 		pr_warn("\n## ERROR %s %s %d ##\n", __FILE__, __func__, __LINE__);
 		return -ENXIO;
@@ -1609,13 +1630,6 @@ static int nand_gpbc_probe(struct platform_device *dev)
 	/* overwrite nand_chip structures */
 	chip->erase = nand_gpbc_erase;
 	chip->badblockbits = 1; /* unused param */
-
-	/* check ONFI */
-	if(!chip->onfi_version) {
-		pr_err("\n## ERROR %s %s %d: not supported ONFI! ##\n",
-		       __FILE__, __func__, __LINE__);
-		BUG();
-	}
 
 	/* allocate the right size buffer now */
 	devm_kfree(gpbc->dev, gpbc->buf.buf);
