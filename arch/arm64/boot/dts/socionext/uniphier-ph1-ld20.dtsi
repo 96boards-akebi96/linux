@@ -372,7 +372,7 @@
 			#size-cells = <0>;
 			interrupts = <0 43 4>;
 			clocks = <&peri 6>;
-			clock-frequency = <400000>;
+			clock-frequency = <100000>;
 		};
 
 		i2c3: i2c@58783000 {
