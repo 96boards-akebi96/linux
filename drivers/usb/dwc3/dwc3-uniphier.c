@@ -536,6 +536,12 @@ static void hs_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int hs_instances)
 		writel(hs_phy_cfgh, hs_phy_addr);
 	}
 
+	/* set the HS swing parameter value */
+	for (i=0; i < hs_instances; i++) {
+		maskwritel(dwc3u->base, priv->u2phy_cfg0_reg + (i * 0x10),
+			   0x00030000, (0x1 << 16));
+	}
+
 	/* set the internal parameter value */
 	for (i=0; i < hs_instances; i++) {
 		hs_phy_addr = dwc3u->base + priv->u2phy_cfg1_reg + (i * 0x10);
