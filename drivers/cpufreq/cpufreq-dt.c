@@ -443,6 +443,7 @@ static struct cpufreq_driver dt_cpufreq_driver = {
 
 static int dt_cpufreq_probe(struct platform_device *pdev)
 {
+	struct cpufreq_dt_platform_data *data = dev_get_platdata(&pdev->dev);
 	struct device *cpu_dev;
 	struct regulator *cpu_reg;
 	struct clk *cpu_clk;
@@ -464,6 +465,9 @@ static int dt_cpufreq_probe(struct platform_device *pdev)
 		regulator_put(cpu_reg);
 
 	dt_cpufreq_driver.driver_data = dev_get_platdata(&pdev->dev);
+
+	if (data && data->have_governor_per_policy)
+		dt_cpufreq_driver.flags |= CPUFREQ_HAVE_GOVERNOR_PER_POLICY;
 
 	ret = cpufreq_register_driver(&dt_cpufreq_driver);
 	if (ret)
