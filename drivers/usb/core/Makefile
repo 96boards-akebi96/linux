@@ -10,4 +10,7 @@ usbcore-y += port.o
 usbcore-$(CONFIG_PCI)		+= hcd-pci.o
 usbcore-$(CONFIG_ACPI)		+= usb-acpi.o
 
+### port_ctrl, port_status ###
+usbcore-$(CONFIG_USB_UNIPHIER_WA_PORT_CONTROL) += sysfs_port.o
+
 obj-$(CONFIG_USB)		+= usbcore.o

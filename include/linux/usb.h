@@ -560,6 +560,10 @@ struct usb_device {
 
 	struct device dev;
 
+#ifdef CONFIG_USB_UNIPHIER_WA_PORT_CONTROL
+	struct usb_hub *hubdev;
+#endif /* CONFIG_USB_UNIPHIER_WA_PORT_CONTROL */
+
 	struct usb_device_descriptor descriptor;
 	struct usb_host_bos *bos;
 	struct usb_host_config *config;

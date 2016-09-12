@@ -1625,6 +1625,10 @@ static void hub_disconnect(struct usb_interface *intf)
 	 */
 	hub->disconnected = 1;
 
+#ifdef CONFIG_USB_UNIPHIER_WA_PORT_CONTROL
+	hub->hdev->hubdev = NULL;
+#endif /* CONFIG_USB_UNIPHIER_WA_PORT_CONTROL */
+
 	/* Disconnect all children and quiesce the hub */
 	hub->error = 0;
 	hub_quiesce(hub, HUB_DISCONNECT);
@@ -1770,6 +1774,10 @@ descriptor_error:
 	INIT_WORK(&hub->events, hub_event);
 	usb_get_intf(intf);
 	usb_get_dev(hdev);
+
+#ifdef CONFIG_USB_UNIPHIER_WA_PORT_CONTROL
+	hdev->hubdev = hub;
+#endif /* CONFIG_USB_UNIPHIER_WA_PORT_CONTROL */
 
 	usb_set_intfdata(intf, hub);
 	intf->needs_remote_wakeup = 1;
@@ -1975,6 +1983,57 @@ void usb_set_device_state(struct usb_device *udev,
 		device_set_wakeup_capable(&udev->dev, wakeup);
 }
 EXPORT_SYMBOL_GPL(usb_set_device_state);
+
+#ifdef CONFIG_USB_UNIPHIER_WA_PORT_CONTROL
+int usb_set_port_status(struct usb_device* udev_ptr, u32 index, u32 status)
+{
+	return set_port_feature(udev_ptr, index, (int)status);
+}
+
+int usb_clr_port_status(struct usb_device* udev_ptr, u32 index, u32 status)
+{
+
+	u32 ret;
+	struct usb_hub *hub;
+
+	/* set new port status */
+	ret = usb_clear_port_feature(udev_ptr, index, status);
+
+	hub = udev_ptr->hubdev;
+
+	if( ( hub != NULL ) && ( ret == 0 ) && ( status == USB_PORT_FEAT_POWER ) ){
+		set_bit(index, hub->change_bits);
+		kick_hub_wq(hub);
+		/*
+		 * NOTE: kick_khubd() written in the old WA code (Linux 3.x) is replaced
+		 *       by kick_hub_wq(hub) in the current code.
+		 */
+	}
+
+	return ret;
+}
+
+int usb_get_port_status(struct usb_device* udev_ptr, u32 index, u32* status_ptr)
+{
+	int result;
+	struct usb_port_status port_status;
+
+	result = get_port_status(udev_ptr, index, &port_status);
+	*status_ptr = (u32)le16_to_cpu(port_status.wPortStatus);
+
+	return result;
+}
+
+int usb_get_hub_status(struct usb_device* udev_ptr, u32 *data)
+{
+	int result;
+	struct usb_hub_status hubdata;
+
+	result = get_hub_status( udev_ptr, &hubdata );
+	*data = (u32)hubdata.wHubStatus || ((u32)hubdata.wHubChange) << 16;
+	return result;
+}
+#endif /* CONFIG_USB_UNIPHIER_WA_PORT_CONTROL */
 
 /*
  * Choose a device number.

@@ -801,6 +801,9 @@ static struct attribute_group dev_string_attr_grp = {
 const struct attribute_group *usb_device_groups[] = {
 	&dev_attr_grp,
 	&dev_string_attr_grp,
+#if defined(CONFIG_USB_UNIPHIER_WA_PORT_CONTROL)
+	&dev_port_attr_grp,
+#endif
 	NULL
 };
 

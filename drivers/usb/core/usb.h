@@ -187,3 +187,11 @@ extern acpi_handle usb_get_hub_port_acpi_handle(struct usb_device *hdev,
 static inline int usb_acpi_register(void) { return 0; };
 static inline void usb_acpi_unregister(void) { };
 #endif
+
+#if defined(CONFIG_USB_UNIPHIER_WA_PORT_CONTROL)
+int usb_get_hub_status(struct usb_device* udev_ptr, u32 *data);
+int usb_get_port_status(struct usb_device* udev_ptr, u32 index, u32* status_ptr);
+int usb_set_port_status(struct usb_device* udev_ptr, u32 index, u32 status);
+int usb_clr_port_status(struct usb_device* udev_ptr, u32 index, u32 status);
+extern const struct attribute_group dev_port_attr_grp;
+#endif
