@@ -11,6 +11,10 @@
 #include <linux/usb.h>
 #include <linux/usb/quirks.h>
 #include "usb.h"
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
+#include <linux/slab.h>
+#include <linux/usb/ch11.h>
+#endif
 
 static ssize_t show_port_status(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -51,12 +55,87 @@ static ssize_t set_port_ctrl(struct device *dev, struct device_attribute *attr, 
 	struct usb_device* udev;
 	u32 flag, status, port;
 	int ret;
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
+	unsigned	selector;
+	struct usb_device* port_dev;
+	struct usb_device_descriptor *dev_desc_buf;
+#endif
 
 	udev = to_usb_device(dev);
 
 	ret = sscanf( buf, "%x %x %x \n", &flag, &status, &port );
 	if( (ret != 3) || (port == 0) )
 		return -EINVAL;
+
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
+	selector = port >> 8;
+	switch (selector) {
+	case 0x6: /* TEST_SINGLE_STEP_GET_DEV_DESC */
+		msleep(15 * 1000);
+		dev_desc_buf = kmalloc(USB_DT_DEVICE_SIZE, GFP_KERNEL);
+		if (!dev_desc_buf){
+			dev_err(&udev->dev, "failed with error %d\n",-ENOMEM);
+			return -ENOMEM;
+		}
+
+		port_dev = usb_hub_find_child(udev, (port & 0xFF));
+		if(!port_dev){
+			dev_err(&udev->dev, "failed with error %d\n",-ENODEV);
+			return -ENODEV;
+		}
+
+		ret = usb_control_msg(port_dev, usb_rcvctrlpipe(port_dev, 0),
+					USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
+					USB_DT_DEVICE << 8, 0,
+					dev_desc_buf, USB_DT_DEVICE_SIZE,
+					USB_CTRL_GET_TIMEOUT);
+		kfree(dev_desc_buf);
+		if (ret < 0){
+			dev_err(&udev->dev, "failed with error %d\n",ret);
+			return ret;
+		}
+		return count;
+	case 0x7: /* TEST_SINGLE_STEP_GET_DEV_DESC_DATA */
+		if (udev != udev->bus->root_hub) {
+			dev_err(&udev->dev, "SINGLE_STEP_SET_FEATURE test only supported on root hub\n");
+			return -EINVAL;
+		}
+
+		ret = usb_control_msg(udev, usb_sndctrlpipe(udev, 0),
+					USB_REQ_SET_FEATURE, USB_RT_PORT,
+					USB_PORT_FEAT_TEST,
+					(6 << 8) | (port & 0xFF),
+					NULL, 0, 60 * 1000);
+		if (ret < 0){
+			dev_err(&udev->dev, "failed with error %d\n",ret);
+			return ret;
+		}
+		return count;
+	case 0x8: /* TEST_HS_HOST_PORT_SUSPEND_RESUME */
+		msleep(15 * 1000);
+		ret = usb_control_msg(udev, usb_sndctrlpipe(udev, 0),
+					USB_REQ_SET_FEATURE, USB_RT_PORT,
+					USB_PORT_FEAT_SUSPEND, (port & 0xFF),
+					NULL, 0, 1000);
+		if (ret < 0){
+			dev_err(&udev->dev, "failed with error %d\n",ret);
+			return ret;
+		}
+
+		msleep(15 * 1000);
+		ret = usb_control_msg(udev, usb_sndctrlpipe(udev, 0),
+					USB_REQ_CLEAR_FEATURE, USB_RT_PORT,
+					USB_PORT_FEAT_SUSPEND, (port & 0xFF),
+					NULL, 0, 1000);
+		if (ret < 0){
+			dev_err(&udev->dev, "failed with error %d\n",ret);
+			return ret;
+		}
+		return count;
+	default:
+		break;
+	}
+#endif
 
 	if( flag ){
 		ret = usb_set_port_status( udev, port, status );

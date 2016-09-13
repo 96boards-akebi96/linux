@@ -51,6 +51,15 @@ config USB_UNIPHIER_WA_PORT_CONTROL
 	---help---
 	  If unsure, say N.
 
+config USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
+	bool "Uniphier USB workaround enabling EHCI HS test mode via sysfs"
+	depends on USB_UNIPHIER_WA
+	select USB_UNIPHIER_WA_PORT_CONTROL
+	select USB_HCD_TEST_MODE
+	default n
+	---help---
+	  If unsure, say N.
+
 #Uniphier USB WA end    ----------------------------------------------------
 
 config USB_XHCI_HCD
