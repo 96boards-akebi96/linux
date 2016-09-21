@@ -13,6 +13,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -348,10 +349,19 @@ static int uniphier_fi2c_master_xfer_one(struct i2c_adapter *adap,
 	dev_dbg(&adap->dev, "complete\n");
 
 	if (unlikely(priv->flags & UNIPHIER_FI2C_DEFER_STOP_COMP)) {
-		u32 status = readl(priv->membase + UNIPHIER_FI2C_SR);
+		time_left = 20;
 
-		if (!(status & UNIPHIER_FI2C_SR_STS) ||
-		    status & UNIPHIER_FI2C_SR_BB) {
+		while (--time_left) {
+			u32 status = readl(priv->membase + UNIPHIER_FI2C_SR);
+
+			if ((status & UNIPHIER_FI2C_SR_STS) &&
+			    !(status & UNIPHIER_FI2C_SR_BB))
+				break;
+
+			udelay(1);
+		}
+
+		if (!time_left) {
 			dev_err(&adap->dev,
 				"stop condition was not completed.\n");
 			uniphier_fi2c_recover(priv);
