@@ -654,6 +654,13 @@ config SPI_NUC900
 	help
 	  SPI driver for Nuvoton NUC900 series ARM SoCs
 
+config SPI_UNIPHIER
+	tristate "Socionext UniPhier SCSSI/MCSSI Controller"
+	depends on ARCH_UNIPHIER
+	help
+	  This driver supports the SCSSI/MCSSI controller on Socionext
+	  UniPhier SoCs.
+
 #
 # Add new SPI master controllers in alphabetical order above this line
 #
