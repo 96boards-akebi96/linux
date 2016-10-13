@@ -41,7 +41,7 @@
 #define EHCI_MAX_CLKS 3
 #define hcd_to_ehci_priv(h) ((struct ehci_platform_priv *)hcd_to_ehci(h)->priv)
 
-#ifdef USB_UNIPHIER_WA_EHCI_BURSTSIZE
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_BURSTSIZE
 #define EHCI_BURSTSIZE 0x00004080
 #endif
 
@@ -78,7 +78,7 @@ static int ehci_platform_reset(struct usb_hcd *hcd)
 	if (pdata->no_io_watchdog)
 		ehci->need_io_watchdog = 0;
 
-#ifdef USB_UNIPHIER_WA_EHCI_BURSTSIZE
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_BURSTSIZE
 	writel(EHCI_BURSTSIZE, hcd->regs + 0x60);
 #endif
 
