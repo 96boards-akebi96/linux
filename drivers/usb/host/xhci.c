@@ -1358,6 +1358,113 @@ command_cleanup:
 	return ret;
 }
 
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
+int xhci_single_queue_ctrl_tx(struct xhci_hcd *xhci, gfp_t mem_flags,struct urb *urb,
+			int slot_id, unsigned int ep_index, unsigned long *lock_flg);
+/* SETUP--(15 sec)--DATA-STATUS xfer limited version of xhci_urb_enqueue() */
+/* Using xhci_single_queue_ctrl_tx() instead of xhci_queue_ctrl_tx() */
+int xhci_submit_single_step_set_feature(struct usb_hcd *hcd, struct urb *urb)
+{
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct xhci_td *buffer;
+	unsigned long flags;
+	int ret = 0;
+	unsigned int slot_id, ep_index;
+	struct urb_priv	*urb_priv;
+	int size, i;
+
+	if (!urb || xhci_check_args(hcd, urb->dev, urb->ep,
+					true, true, __func__) <= 0)
+		return -EINVAL;
+
+	slot_id = urb->dev->slot_id;
+	ep_index = xhci_get_endpoint_index(&urb->ep->desc);
+
+	if (!HCD_HW_ACCESSIBLE(hcd)) {
+		if (!in_interrupt())
+			xhci_dbg(xhci, "urb submitted during PCI suspend\n");
+		ret = -ESHUTDOWN;
+		goto exit;
+	}
+
+	if (usb_endpoint_xfer_isoc(&urb->ep->desc))
+		size = urb->number_of_packets;
+	else if (usb_endpoint_is_bulk_out(&urb->ep->desc) &&
+	    urb->transfer_buffer_length > 0 &&
+	    urb->transfer_flags & URB_ZERO_PACKET &&
+	    !(urb->transfer_buffer_length % usb_endpoint_maxp(&urb->ep->desc)))
+		size = 2;
+	else
+		size = 1;
+
+	urb_priv = kzalloc(sizeof(struct urb_priv) +
+				  size * sizeof(struct xhci_td *), GFP_KERNEL);
+	if (!urb_priv)
+		return -ENOMEM;
+
+	buffer = kzalloc(size * sizeof(struct xhci_td), GFP_KERNEL);
+	if (!buffer) {
+		kfree(urb_priv);
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < size; i++) {
+		urb_priv->td[i] = buffer;
+		buffer++;
+	}
+
+	urb_priv->length = size;
+	urb_priv->td_cnt = 0;
+	urb->hcpriv = urb_priv;
+
+	if (usb_endpoint_xfer_control(&urb->ep->desc)) {
+		/* Check to see if the max packet size for the default control
+		 * endpoint changed during FS device enumeration
+		 */
+		if (urb->dev->speed == USB_SPEED_FULL) {
+			ret = xhci_check_maxpacket(xhci, slot_id,
+					ep_index, urb);
+			if (ret < 0) {
+				xhci_urb_free_priv(urb_priv);
+				urb->hcpriv = NULL;
+				return ret;
+			}
+		}
+
+		/* We have a spinlock and interrupts disabled, so we must pass
+		 * atomic context to this function, which may allocate memory.
+		 */
+		spin_lock_irqsave(&xhci->lock, flags);
+		if (xhci->xhc_state & XHCI_STATE_DYING)
+			goto dying;
+		/* SETUP--(15 sec)--DATA wait version of xhci_queue_ctrl_tx() */
+		ret = xhci_single_queue_ctrl_tx(xhci, GFP_ATOMIC, urb,
+				slot_id, ep_index, &flags);
+		if (ret)
+			goto free_priv;
+		spin_unlock_irqrestore(&xhci->lock, flags);
+	}else{
+		/* Control xfer only supported */
+		ret = -EINVAL;
+		xhci_urb_free_priv(urb_priv);
+		urb->hcpriv = NULL;
+		return ret;
+	}
+exit:
+	return ret;
+dying:
+	xhci_dbg(xhci, "Ep 0x%x: URB %p submitted for "
+			"non-responsive xHCI host.\n",
+			urb->ep->desc.bEndpointAddress, urb);
+	ret = -ESHUTDOWN;
+free_priv:
+	xhci_urb_free_priv(urb_priv);
+	urb->hcpriv = NULL;
+	spin_unlock_irqrestore(&xhci->lock, flags);
+	return ret;
+}
+#endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE */
+
 /*
  * non-error returns are a promise to giveback() the urb later
  * we drop ownership so next owner (or urb unlink) can get it

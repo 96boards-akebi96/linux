@@ -11,7 +11,8 @@
 #include <linux/usb.h>
 #include <linux/usb/quirks.h>
 #include "usb.h"
-#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
+#if defined(CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE) || \
+    defined(CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE)
 #include <linux/slab.h>
 #include <linux/usb/ch11.h>
 #endif
@@ -55,7 +56,8 @@ static ssize_t set_port_ctrl(struct device *dev, struct device_attribute *attr, 
 	struct usb_device* udev;
 	u32 flag, status, port;
 	int ret;
-#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
+#if defined(CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE) || \
+    defined(CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE)
 	unsigned	selector;
 	struct usb_device* port_dev;
 	struct usb_device_descriptor *dev_desc_buf;
@@ -67,7 +69,8 @@ static ssize_t set_port_ctrl(struct device *dev, struct device_attribute *attr, 
 	if( (ret != 3) || (port == 0) )
 		return -EINVAL;
 
-#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
+#if defined(CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE) || \
+    defined(CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE)
 	selector = port >> 8;
 	switch (selector) {
 	case 0x6: /* TEST_SINGLE_STEP_GET_DEV_DESC */
