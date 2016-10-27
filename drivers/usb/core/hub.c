@@ -5843,3 +5843,58 @@ acpi_handle usb_get_hub_port_acpi_handle(struct usb_device *hdev,
 	return ACPI_HANDLE(&hub->ports[port1 - 1]->dev);
 }
 #endif
+
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
+/**
+ * usb_ss_compliance_transition_enable - enable USB3.1 Compliance Mode
+ * @hdev: USB device belonging to the usb hub
+ * @port1: port num of the port (1, 2, ..)
+ *
+ * This operation corresponds to "set.port.compliance" of
+ * USB3.1 Spec. 10.3 "Hub Downstream Facing Ports".
+ *
+ * Return: If successful, zero. Otherwise, a negative error number.
+ */
+int usb_ss_compliance_transition_enable(struct usb_device *hdev, int port1)
+{
+	int ret;
+	int state_port1;
+
+	if (!hub_is_superspeed(hdev)) {
+		dev_warn(&hdev->dev, "Not a SS Hub. SS Enable Compliance Mode of port %d is not supported.\n", port1);
+		return 0;
+	}
+
+	/* Disable Auto-Suspend of Root Hub */
+	/* This changes /sys/bus/usb/devices/usb?/power/control to "on". */
+	usb_disable_autosuspend(hdev);
+	dev_info(&hdev->dev, "Disabled autosuspend.\n");
+
+	/* Enable Compliance Mode on port1 */
+	state_port1 = (0xA << 8) | port1;
+	ret = set_port_feature(hdev, state_port1, USB_PORT_FEAT_LINK_STATE);
+	if (ret < 0){
+		return ret;
+	}
+	dev_info(&hdev->dev, "SS Enable Compliance Mode of port %d done.\n", port1);
+	return 0;
+}
+
+/**
+ * usb_ss_compliance_transition_enable_all - enable USB3.1 Compliance Mode on all ports under the hub.
+ * @hdev: USB device belonging to the usb hub
+ *
+ * Return: If successful, zero. Otherwise, a negative error number.
+ */
+int usb_ss_compliance_transition_enable_all(struct usb_device *hdev)
+{
+	int i;
+	int ret = 0;
+	for (i = 0; i < hdev->maxchild; i++) {
+		ret = usb_ss_compliance_transition_enable(hdev, i+1);
+		if (ret < 0) break;
+	}
+	return ret;
+}
+
+#endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE */

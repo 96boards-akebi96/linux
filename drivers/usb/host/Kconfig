@@ -32,7 +32,7 @@ config USB_UNIPHIER_WA_EHCI_BURSTSIZE
 
 config USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
 	bool "Uniphier USB workaround for unexpected transition to compliance mode"
-	depends on USB_UNIPHIER_WA
+	depends on USB_UNIPHIER_WA && !USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
 	default y
 	---help---
 	  If unsure, say N.

@@ -69,6 +69,22 @@ static ssize_t set_port_ctrl(struct device *dev, struct device_attribute *attr, 
 	if( (ret != 3) || (port == 0) )
 		return -EINVAL;
 
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
+	selector = port >> 8;
+	if (status == USB_PORT_FEAT_LINK_STATE && selector == 0xA) { /* Enable Compliance Mode (for SS) */
+		if ((port & 0xFF) == 0) {
+			ret = usb_ss_compliance_transition_enable_all(udev);
+		} else {
+			ret = usb_ss_compliance_transition_enable(udev, (port & 0xFF));
+		}
+		if (ret < 0){
+			dev_err(&udev->dev, "failed with error %d\n",ret);
+			return ret;
+		}
+		return count;
+	}
+#endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE */
+
 #if defined(CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE) || \
     defined(CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE)
 	selector = port >> 8;

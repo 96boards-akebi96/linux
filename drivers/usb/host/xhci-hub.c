@@ -1184,6 +1184,25 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				break;
 			}
 
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
+			/* Enable transition to Compliance Mode (if CTC supported) */
+			if (link_state == USB_SS_PORT_LS_COMP_MOD) {
+				xhci_dbg(xhci, "Compliance Transition Enable port %d\n", wIndex);
+
+				/* Check HCCPARAMS2.CTC */
+				if (!HCC2_CTC(xhci->hcc_params)) {
+					xhci_dbg(xhci, "HCCPARAMS2.CTC=0. Ready to go SS-compliance.\n");
+					break;
+				}
+
+				xhci_set_link_state(xhci, port_array, wIndex,
+						link_state);
+				temp = readl(port_array[wIndex]);
+				xhci_dbg(xhci, "HCCPARAMS2.CTC=1 & CTE=1. Ready to go SS-compliance.\n");
+				break;
+			}
+#endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE */
+
 			/* Software should not attempt to set
 			 * port link state above '3' (U3) and the port
 			 * must be enabled.

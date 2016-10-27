@@ -195,3 +195,8 @@ int usb_set_port_status(struct usb_device* udev_ptr, u32 index, u32 status);
 int usb_clr_port_status(struct usb_device* udev_ptr, u32 index, u32 status);
 extern const struct attribute_group dev_port_attr_grp;
 #endif
+
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
+int usb_ss_compliance_transition_enable(struct usb_device *hdev, int port1);
+int usb_ss_compliance_transition_enable_all(struct usb_device *hdev);
+#endif
