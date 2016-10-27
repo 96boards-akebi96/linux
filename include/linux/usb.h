@@ -622,8 +622,22 @@ struct usb_device {
 	struct usb3_lpm_parameters u1_params;
 	struct usb3_lpm_parameters u2_params;
 	unsigned lpm_disable_count;
+
+#if defined(CONFIG_USB_UNIPHIER_WA_OC_DETECT)
+	spinlock_t			oc_ind_lock;
+	struct st_oc_ind*	oc_ind;
+#endif
 };
 #define	to_usb_device(d) container_of(d, struct usb_device, dev)
+
+#if defined(CONFIG_USB_UNIPHIER_WA_OC_DETECT)
+struct st_oc_ind {
+	struct st_oc_ind*	next;
+	char				msg[16];
+	int					port;
+	u32					status;
+};
+#endif
 
 static inline struct usb_device *interface_to_usbdev(struct usb_interface *intf)
 {

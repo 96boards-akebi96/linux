@@ -84,6 +84,14 @@ config USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE
 	---help---
 	  If unsure, say N.
 
+config USB_UNIPHIER_WA_OC_DETECT
+	bool "Uniphier USB workaround enabling the read of overcurrent status via sysfs"
+	depends on USB_UNIPHIER_WA
+	select USB_UNIPHIER_WA_PORT_CONTROL
+	default y
+	---help---
+	  If unsure, say N.
+
 #Uniphier USB WA end    ----------------------------------------------------
 
 config USB_XHCI_HCD

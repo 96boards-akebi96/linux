@@ -999,6 +999,7 @@ int ehci_hub_control(
 		if ((temp & PORT_OCC) && !ignore_oc){
 			status |= USB_PORT_STAT_C_OVERCURRENT << 16;
 
+#ifndef CONFIG_USB_UNIPHIER_WA_OC_DETECT
 			/*
 			 * Hubs should disable port power on over-current.
 			 * However, not all EHCI implementations do this
@@ -1013,6 +1014,7 @@ int ehci_hub_control(
 				spin_lock_irqsave(&ehci->lock, flags);
 				temp = ehci_readl(ehci, status_reg);
 			}
+#endif /* not CONFIG_USB_UNIPHIER_WA_OC_DETECT */
 		}
 
 		/* no reset or resume pending */

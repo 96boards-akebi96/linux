@@ -287,6 +287,9 @@ static void usb_release_dev(struct device *dev)
 	kfree(udev->product);
 	kfree(udev->manufacturer);
 	kfree(udev->serial);
+#if defined(CONFIG_USB_UNIPHIER_WA_OC_DETECT)
+	usb_finish_oc(udev);
+#endif
 	kfree(udev);
 }
 
@@ -426,6 +429,10 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent,
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return NULL;
+
+#if defined(CONFIG_USB_UNIPHIER_WA_OC_DETECT)
+	usb_initialize_oc( dev );
+#endif
 
 	if (!usb_get_hcd(usb_hcd)) {
 		kfree(dev);

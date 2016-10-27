@@ -5084,7 +5084,14 @@ static void port_event(struct usb_hub *hub, int port1)
 		dev_dbg(&port_dev->dev, "over-current change\n");
 		usb_clear_port_feature(hdev, port1,
 				USB_PORT_FEAT_C_OVER_CURRENT);
+#ifdef CONFIG_USB_UNIPHIER_WA_OC_DETECT
+		usb_clear_port_feature( hdev, port1, USB_PORT_FEAT_POWER );
+#endif /* CONFIG_USB_UNIPHIER_WA_OC_DETECT */
 		msleep(100);	/* Cool down */
+#ifdef CONFIG_USB_UNIPHIER_WA_OC_DETECT
+		usb_notify_oc( hdev, port1, (u32)portstatus | ((u32)portchange << 16) );
+		connect_change = 1;
+#endif /* CONFIG_USB_UNIPHIER_WA_OC_DETECT */
 		hub_power_on(hub, true);
 		hub_port_status(hub, port1, &status, &unused);
 		if (status & USB_PORT_STAT_OVERCURRENT)

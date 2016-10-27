@@ -188,6 +188,13 @@ static inline int usb_acpi_register(void) { return 0; };
 static inline void usb_acpi_unregister(void) { };
 #endif
 
+#if defined(CONFIG_USB_UNIPHIER_WA_OC_DETECT)
+void usb_initialize_oc( struct usb_device *udev );
+void usb_finish_oc( struct usb_device *udev );
+void usb_notify_oc( struct usb_device *udev, int port, u32 status );
+extern const struct attribute_group dev_oc_ind_attr_grp;
+#endif
+
 #if defined(CONFIG_USB_UNIPHIER_WA_PORT_CONTROL)
 int usb_get_hub_status(struct usb_device* udev_ptr, u32 *data);
 int usb_get_port_status(struct usb_device* udev_ptr, u32 index, u32* status_ptr);
