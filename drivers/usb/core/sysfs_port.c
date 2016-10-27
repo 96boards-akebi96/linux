@@ -17,6 +17,82 @@
 #include <linux/usb/ch11.h>
 #endif
 
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_DWC3
+#include <linux/io.h>
+#include <linux/usb/hcd.h>
+#define GUSB3PIPECTL_OFST(n)	(0xc2c0 + ((n)*0x04))	/* offset from xHCI CAPLENGTH */
+#define HSTPRTCMPL_BIT		(1 << 30)
+
+static int force_ss_compliance_mode(struct usb_device *udev, u32 port1)
+{
+	struct usb_hcd		*hcd;
+	void __iomem		*glb_reg;
+	u32			port0 = port1 - 1;	/* Port 0, 1, .. */
+	u32			temp;
+	int			ret = 0;
+
+	if (udev->speed < USB_SPEED_SUPER) {
+		dev_err(&udev->dev, "SS Compliance Mode is not supported for this root hub.\n");
+		return -EINVAL;
+	}
+	if (port1 == 0 || port1 > (udev->maxchild)) {
+		dev_err(&udev->dev, "Port %d doesn't exist.\n", port1);
+		return -EINVAL;
+	}
+
+	if (!(udev->dev.parent)) {
+		/* failed to find USB HC device */
+		return -EINVAL;
+	}
+	hcd = dev_get_drvdata(udev->dev.parent);
+	if (!hcd) {
+		/* failed to find USB HC driver (usb_hcd) */
+		return -EINVAL;
+	}
+	if (!(hcd->regs)) {
+		/* failed to find USB HC driver register */
+		return -EINVAL;
+	}
+
+	/* remap DWC3 GUSB3PIPECTL(port) register */
+	glb_reg = ioremap_nocache(hcd->rsrc_start + GUSB3PIPECTL_OFST(port0), 4);
+
+	/* GUSB3PIPECTL.HSTPRTCMPL==0? */
+	/* If true, this is the 1st call of force_ss_compliance_mode() */
+	temp = readl(glb_reg);
+	if ((temp & HSTPRTCMPL_BIT) == 0) {
+		/* 1. Clear PORTSC.PP */
+		/* (This step is only for the 1st call of force_ss_compliance_mode()) */
+		usb_disable_autosuspend(udev);
+		dev_info(&udev->dev, "Disabled autosuspend.\n");
+		ret= usb_control_msg(udev, usb_sndctrlpipe(udev, 0),
+					USB_REQ_CLEAR_FEATURE, USB_RT_PORT,
+					USB_PORT_FEAT_POWER,
+					port1,
+					NULL, 0, 1000);
+		if (ret < 0){
+			goto done;
+		}
+		dev_info(&udev->dev, "Port Power bit cleared at port %d.\n", port1);
+	} else {
+		/* 2. Clear GUSB3PIPECTL.HSTPRTCMPL */
+		/* (This step is only for the 2nd, 3rd, .. call of force_ss_compliance_mode()) */
+		temp &= ~HSTPRTCMPL_BIT;
+		writel(temp, glb_reg);
+		dev_info(&udev->dev, "Force SS Conpliance bit cleared at port %d.\n", port1);
+	}
+	/* 3. Set GUSB3PIPECTL[30].HSTPRTCMPL */
+	temp = readl(glb_reg);
+	temp |= HSTPRTCMPL_BIT;
+	writel(temp, glb_reg);
+	dev_info(&udev->dev, "Force SS Conpliance bit set at port %d.\n", port1);
+
+done:
+	iounmap(glb_reg);
+	return ret;
+}
+#endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_DWC3 */
+
 static ssize_t show_port_status(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct usb_device	*udev;
@@ -83,6 +159,17 @@ static ssize_t set_port_ctrl(struct device *dev, struct device_attribute *attr, 
 		}
 		return count;
 	}
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_DWC3
+	if (status == USB_PORT_FEAT_LINK_STATE && selector == 0xC) {
+		/* Not for USB/xHCI spec. DWC3 GUSB3PIPECTL force compliance mode. */
+		ret = force_ss_compliance_mode(udev, (port & 0xFF));
+		if (ret < 0){
+			dev_err(&udev->dev, "failed with error %d\n",ret);
+			return ret;
+		}
+		return count;
+	}
+#endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_DWC3 */
 #endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE */
 
 #if defined(CONFIG_USB_UNIPHIER_WA_EHCI_COMPLIANCE_TEST_MODE) || \
