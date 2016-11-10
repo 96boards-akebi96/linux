@@ -614,6 +614,12 @@ static int scsi_probe_lun(struct scsi_device *sdev, unsigned char *inq_result,
 				    (sshdr.ascq == 0))
 					continue;
 			}
+#ifdef CONFIG_SCSI_UNIPHIER_WA_INQUIRY_RETRY
+			if ((host_byte(result) & DID_TIME_OUT) &&
+			    (resid == try_inquiry_len)) {
+				continue;
+			}
+#endif
 		} else {
 			/*
 			 * if nothing was transferred, we try

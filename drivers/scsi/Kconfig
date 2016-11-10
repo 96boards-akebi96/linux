@@ -248,6 +248,13 @@ config SCSI_SCAN_ASYNC
 	  Note that this setting also affects whether resuming from
 	  system suspend will be performed asynchronously.
 
+config SCSI_UNIPHIER_WA_INQUIRY_RETRY
+	bool "Uniphier SCSI workaround enabling retry of INQUIRY"
+	depends on SCSI
+	default y
+	---help---
+	  If unsure, say N.
+
 menu "SCSI Transports"
 	depends on SCSI
 
