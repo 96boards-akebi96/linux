@@ -873,6 +873,20 @@ static void hub_power_on(struct usb_hub *hub, bool do_delay)
 		msleep(hub_power_on_good_delay(hub));
 }
 
+#if defined(CONFIG_USB_UNIPHIER_WA_OC_DETECT)
+static void hub_power_off(struct usb_hub *hub)
+{
+	int port1;
+
+	for (port1 = 1; port1 <= hub->descriptor->bNbrPorts; port1++)
+		usb_clear_port_feature(hub->hdev, port1, USB_PORT_FEAT_POWER);
+		/*
+		 * NOTE: clear_port_feature() written in the old WA code (Linux 3.x)
+		 *       is replaced by usb_clear_port_feature() in the current code.
+		 */
+}
+#endif
+
 static int hub_hub_status(struct usb_hub *hub,
 		u16 *status, u16 *change)
 {
@@ -4796,6 +4810,17 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 		}
 	}
 
+#if defined(CONFIG_USB_UNIPHIER_WA_OC_DETECT)
+	/*
+	 * NOTE: This WA block is written inside hub_port_connect_change()
+	 *       in the old WA code (Linux 3.x),
+	 *       NOW inside hub_port_connect() in the current code.
+	 */
+	if ((portchange & USB_PORT_STAT_C_OVERCURRENT) || (portstatus & USB_PORT_STAT_OVERCURRENT))
+		goto done;
+
+#endif /* CONFIG_USB_UNIPHIER_WA_OC_DETECT */
+
 	/* Return now if debouncing failed or nothing is connected or
 	 * the device was "removed".
 	 */
@@ -5079,23 +5104,38 @@ static void port_event(struct usb_hub *hub, int port1)
 	}
 
 	if (portchange & USB_PORT_STAT_C_OVERCURRENT) {
+#ifndef CONFIG_USB_UNIPHIER_WA_OC_DETECT
 		u16 status = 0, unused;
+#endif
 
 		dev_dbg(&port_dev->dev, "over-current change\n");
 		usb_clear_port_feature(hdev, port1,
 				USB_PORT_FEAT_C_OVER_CURRENT);
-#ifdef CONFIG_USB_UNIPHIER_WA_OC_DETECT
-		usb_clear_port_feature( hdev, port1, USB_PORT_FEAT_POWER );
-#endif /* CONFIG_USB_UNIPHIER_WA_OC_DETECT */
 		msleep(100);	/* Cool down */
 #ifdef CONFIG_USB_UNIPHIER_WA_OC_DETECT
+		/*
+		 * NOTE: This WA block is written inside hub_events()
+		 *       in the old WA code (Linux 3.x),
+		 *       NOW inside port_event() in the current code
+		 *       with replacing "i" by "port1".
+		 * NOTE: clear_port_feature() written in the old WA code (Linux 3.x)
+		 *       is replaced by usb_clear_port_feature() in the current code.
+		 */
+		if( !hdev->parent ){
+			/*_ printk( "%s:%d: hub_power_off\n", __FUNCTION__, __LINE__ ); _*/
+			hub_power_off( hub );
+		}else{
+			/*_ printk( "%s:%d: clear_power_feature(%d)\n", __FUNCTION__, __LINE__, port1 ); _*/
+			usb_clear_port_feature( hdev, port1, USB_PORT_FEAT_POWER );
+		}
 		usb_notify_oc( hdev, port1, (u32)portstatus | ((u32)portchange << 16) );
 		connect_change = 1;
-#endif /* CONFIG_USB_UNIPHIER_WA_OC_DETECT */
+#else
 		hub_power_on(hub, true);
 		hub_port_status(hub, port1, &status, &unused);
 		if (status & USB_PORT_STAT_OVERCURRENT)
 			dev_err(&port_dev->dev, "over-current condition\n");
+#endif /* CONFIG_USB_UNIPHIER_WA_OC_DETECT */
 	}
 
 #ifdef CONFIG_USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
