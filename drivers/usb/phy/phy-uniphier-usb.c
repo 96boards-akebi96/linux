@@ -76,17 +76,23 @@ static int uniphier_usb_phy_init_ld11(struct phy *phy)
 	struct uniphier_usbphy *uni_phy = phy_get_drvdata(phy);
 	void __iomem *base = uni_phy->base;
 
+	struct device_node *node = phy->dev.of_node; /* node on DTS */
+
+	u32 ctrl2 = 0x00000106;
+	if (of_device_is_compatible(node, "socionext,ph1-ld11pa-usbphy"))
+		ctrl2 = 0x00000116;	/* specific for pa */
+
 	/* setting HS PHY CH0 */
 	uniphier_usbphy_writel( base, 0x00, 0x82280600); /* USBPHY1CTRL */
-	uniphier_usbphy_writel( base, 0x04, 0x00000106); /* USBPHY1CTRL2 */
+	uniphier_usbphy_writel( base, 0x04, ctrl2);      /* USBPHY1CTRL2 */
 
 	/* setting HS PHY CH1 */
 	uniphier_usbphy_writel( base, 0x08, 0x82280600); /* USBPHY2CTRL */
-	uniphier_usbphy_writel( base, 0x0c, 0x00000106); /* USBPHY2CTRL2 */
+	uniphier_usbphy_writel( base, 0x0c, ctrl2);      /* USBPHY2CTRL2 */
 
 	/* setting HS PHY CH2 */
 	uniphier_usbphy_writel( base, 0x10, 0x82280600); /* USBPHY3CTRL */
-	uniphier_usbphy_writel( base, 0x14, 0x00000106); /* USBPHY3CTRL2 */
+	uniphier_usbphy_writel( base, 0x14, ctrl2);      /* USBPHY3CTRL2 */
 
 	return 0;
 }
@@ -171,6 +177,10 @@ static const struct of_device_id uniphier_usbphy_ids[] = {
 	},
 	{
 		.compatible = "socionext,ph1-ld11-usbphy",
+		.data       = (void *)&uniphier_usb_phy_ops_ld11,
+	},
+	{
+		.compatible = "socionext,ph1-ld11pa-usbphy",
 		.data       = (void *)&uniphier_usb_phy_ops_ld11,
 	},
 	{ /* sentinel */ }
