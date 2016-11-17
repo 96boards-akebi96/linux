@@ -92,6 +92,13 @@ config USB_UNIPHIER_WA_OC_DETECT
 	---help---
 	  If unsure, say N.
 
+config USB_UNIPHIER_WA_STORAGE_INQUIRY_WAIT
+	bool "Uniphier USB workaround to wait before INQUIRY to reduce INQUIRY timeout"
+	depends on USB_UNIPHIER_WA
+	default y
+	---help---
+	  If unsure, say N.
+
 #Uniphier USB WA end    ----------------------------------------------------
 
 config USB_XHCI_HCD

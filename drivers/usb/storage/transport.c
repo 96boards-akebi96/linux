@@ -1047,11 +1047,11 @@ int usb_stor_Bulk_max_lun(struct us_data *us)
 	 */
 	if (result > 0) {
 		if (us->iobuf[0] < 16) {
-
+#ifdef CONFIG_USB_UNIPHIER_WA_STORAGE_INQUIRY_WAIT
 			dev_info(&us->pusb_intf->dev,
 				"USB Storage Bulk Only Transport Max LUN Success.\n");
 			msleep(3000);
-
+#endif
 			return us->iobuf[0];
 		} else {
 			dev_info(&us->pusb_intf->dev,
