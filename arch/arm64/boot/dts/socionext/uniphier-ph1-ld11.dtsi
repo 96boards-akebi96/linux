@@ -407,21 +407,14 @@
 			clocks = <&sysctrl 3>, <&sysctrl 4>;
 		};
 
-		sdhc@5a000000 {
-			compatible = "cdns,cdns-sdhci-glue";
-			reg = <0x5a000000 0x200>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges;
-
-			emmc: sdhc@5a000000 {
-				compatible = "cdns,cdns-sdhci";
-				status = "disabled";
-				reg = <0x5a000200 0x200>;
-				interrupts = <0 78 4>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_emmc>;
-			};
+		emmc: sdhc@5a000000 {
+			compatible = "cdns,sd4hc";
+			reg = <0x5a000000 0x400>;
+			interrupts = <0 78 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_emmc_1v8>;
+			bus-width = <8>;
+			mmc-hs200-1_8v;
 		};
 
 		usb0: usb@5a800100 {
