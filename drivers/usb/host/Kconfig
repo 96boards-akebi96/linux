@@ -99,6 +99,13 @@ config USB_UNIPHIER_WA_STORAGE_INQUIRY_WAIT
 	---help---
 	  If unsure, say N.
 
+config USB_UNIPHIER_WA_DISABLE_USB2_HW_LPM
+	bool "Uniphier USB workaround disabling USB2 HW LPM of xHCI"
+	depends on USB_UNIPHIER_WA
+	default y
+	---help---
+	  If unsure, say N.
+
 #Uniphier USB WA end    ----------------------------------------------------
 
 config USB_XHCI_HCD

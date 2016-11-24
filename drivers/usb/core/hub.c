@@ -4685,6 +4685,15 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	if (hcd->driver->update_device)
 		hcd->driver->update_device(hcd, udev);
 	hub_set_initial_usb2_lpm_policy(udev);
+
+#ifdef CONFIG_USB_UNIPHIER_WA_DISABLE_USB2_HW_LPM
+	dev_dbg(&udev->dev, "Force disabling USB2 Hardware LPM.\n");
+	/* force disable usb2_hardware_lpm */
+	/* by emulating usb2_hardware_lpm_store() (sysfs write) operation */
+	udev->usb2_hw_lpm_allowed = 0;
+	usb_set_usb2_hardware_lpm(udev, 0);
+#endif
+
 fail:
 	if (retval) {
 		hub_port_disable(hub, port1, 0);
