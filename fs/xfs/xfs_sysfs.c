@@ -18,11 +18,14 @@
 
 #include "xfs.h"
 #include "xfs_shared.h"
+#include "xfs_format.h"
 #include "xfs_log_format.h"
+#include "xfs_trans_resv.h"
 #include "xfs_sysfs.h"
 #include "xfs_log.h"
 #include "xfs_log_priv.h"
 #include "xfs_stats.h"
+#include "xfs_mount.h"
 
 struct xfs_sysfs_attr {
 	struct attribute attr;
