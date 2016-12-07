@@ -17,7 +17,9 @@
 #include "clk-uniphier.h"
 
 static struct uniphier_clk_init_data ph1_pxs3_clk_idata[] __initdata = {
-	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 80, 1),
+	UNIPHIER_CLK_FACTOR("cpll", -1, "ref", 104, 1),         /* ARM: 2600 MHz */
+	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 80, 1),          /* 2000 MHz */
+	UNIPHIER_CLK_FACTOR("s2pll", -1, "ref", 88, 1),         /* IPP: 2400 MHz */
 /*	UNIPHIER_CLK_FACTOR("uart", 3, "spll", 1, 34),*/
 /*	UNIPHIER_CLK_FACTOR("fi2c", 4, "spll", 1, 40),*/
 	UNIPHIER_CLK_GATE("ether0-clken", -1, NULL, 0x210c, 9),
@@ -46,6 +48,16 @@ static struct uniphier_clk_init_data ph1_pxs3_clk_idata[] __initdata = {
 	UNIPHIER_CLK_GATE("ahci1-link", -1, "ahci1-link-clken", 0x200c, 8),
 	UNIPHIER_CLK_GATE("pcie-clken", -1, NULL, 0x210c, 3),
 	UNIPHIER_CLK_GATE("pcie", 27, "pcie-clken", 0x200c, 3),
+	/* CPU gears */
+	UNIPHIER_CLK_DIV4("cpll", 2, 3, 4, 8),
+	UNIPHIER_CLK_DIV4("spll", 2, 3, 4, 8),
+	UNIPHIER_CLK_DIV4("s2pll", 2, 3, 4, 8),
+	UNIPHIER_CLK_CPUGEAR("cpu-ca53", 33, 0x8080, 0xf, 8,
+			     "cpll/2", "spll/2", "cpll/3", "spll/3",
+			     "spll/4", "spll/8", "cpll/4", "cpll/8"),
+	UNIPHIER_CLK_CPUGEAR("cpu-ipp", 34, 0x8100, 0xf, 8,
+			     "s2pll/2", "spll/2", "s2pll/3", "spll/3",
+			     "spll/4", "spll/8", "s2pll/4", "s2pll/8"),
 	{ /* sentinel */ }
 };
 
