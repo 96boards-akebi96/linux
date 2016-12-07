@@ -27,6 +27,12 @@ static struct clk * __init uniphier_clk_register(struct device_node *np,
 					  struct uniphier_clk_init_data *idata)
 {
 	switch (idata->type) {
+	case UNIPHIER_CLK_TYPE_CPUGEAR:
+		return uniphier_clk_register_cpugear(NULL, idata->name,
+						     idata->data.cpugear.parent_names,
+						     idata->data.cpugear.num_parents,
+						     regbase + idata->data.cpugear.regbase,
+						     ilog2(idata->data.cpugear.num_parents));
 	case UNIPHIER_CLK_TYPE_FIXED_FACTOR:
 		return clk_register_fixed_factor(NULL, idata->name,
 						 idata->data.factor.parent_name,

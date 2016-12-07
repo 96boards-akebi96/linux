@@ -17,11 +17,21 @@
 
 #include <linux/kernel.h>
 
+#define UNIPHIER_CLK_CPUGEAR_MAX_PARENTS	16
+
 enum uniphier_clk_type {
+	UNIPHIER_CLK_TYPE_CPUGEAR,
 	UNIPHIER_CLK_TYPE_FIXED_FACTOR,
 	UNIPHIER_CLK_TYPE_FIXED_RATE,
 	UNIPHIER_CLK_TYPE_GATE,
 	UNIPHIER_CLK_TYPE_MUX,
+};
+
+struct uniphier_clk_cpugear_data {
+	const char *parent_names[UNIPHIER_CLK_CPUGEAR_MAX_PARENTS];
+	unsigned int num_parents;
+	unsigned int regbase;
+	unsigned int mask;
 };
 
 struct uniphier_clk_fixed_factor_data {
@@ -54,6 +64,7 @@ struct uniphier_clk_init_data {
 	enum uniphier_clk_type type;
 	int output_index;
 	union {
+		struct uniphier_clk_cpugear_data cpugear;
 		struct uniphier_clk_fixed_factor_data factor;
 		struct uniphier_clk_fixed_rate_data rate;
 		struct uniphier_clk_gate_data gate;
@@ -98,6 +109,11 @@ struct uniphier_clk_init_data {
 			.flags = CLK_GATE_SET_TO_DISABLE,	\
 		},						\
 	}
+
+struct clk *uniphier_clk_register_cpugear(struct device *dev, const char *name,
+					  const char * const *parent_names,
+					  u8 num_parents,
+					  void __iomem *regbase, u32 mask);
 
 int uniphier_clk_init(struct device_node *np,
 		      struct uniphier_clk_init_data *idata);
