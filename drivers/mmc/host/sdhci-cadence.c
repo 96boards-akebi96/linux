@@ -117,9 +117,10 @@ static int sdhci_cdns_set_tune_val(struct sdhci_host *host, unsigned int val)
 
 static int sdhci_cdns_execute_tuning(struct sdhci_host *host, u32 opcode)
 {
-	int max_streak = 0;
 	int cur_streak = 0;
-	int end_of_streak, i;
+	int max_streak = 0;
+	int end_of_streak = 0;
+	int i;
 
 	if (host->timing != MMC_TIMING_MMC_HS200)
 		return -ENOTSUPP;
@@ -133,8 +134,10 @@ static int sdhci_cdns_execute_tuning(struct sdhci_host *host, u32 opcode)
 			cur_streak = 0;
 		} else { /* good */
 			cur_streak++;
-			max_streak = max(max_streak, cur_streak);
-			end_of_streak = i;
+			if (cur_streak > max_streak) {
+				max_streak = cur_streak;
+				end_of_streak = i;
+			}
 		}
 	}
 
