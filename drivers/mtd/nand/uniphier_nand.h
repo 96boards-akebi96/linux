@@ -44,7 +44,7 @@
 // If maximum number of the corrected bit of each sector is larger than
 // this definition, -EUCLEAN is notified to upper layer.
 // If uncorrectable error occurs, -EBADMSG is notified to upper layer.
-#define NAND_GPBC_CORRECTION_THRESHOLD	1
+#define NAND_GPBC_CORRECTION_THRESHOLD	(CONFIG_MTD_NAND_UNIPHIER_ECC_CORRECT_BITS + 1)
 
 //#
 //# Partition settings
