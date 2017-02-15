@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/of_address.h>
 #include <linux/of_platform.h>
 
 static struct fb_fix_screeninfo simplefb_fix = {
@@ -269,6 +270,30 @@ static int simplefb_clocks_init(struct simplefb_par *par,
 static void simplefb_clocks_destroy(struct simplefb_par *par) { }
 #endif
 
+#if defined CONFIG_OF
+static struct resource *simplefb_parse_dt_reserved_mem(struct device *dev)
+{
+	static struct resource res;
+	struct device_node *np;
+	int ret;
+
+	np = of_parse_phandle(dev->of_node, "memory-region", 0);
+	if (!np)
+		return NULL;
+
+	ret = of_address_to_resource(np, 0, &res);
+	if (ret < 0)
+		return NULL;
+
+	return &res;
+}
+#else
+static struct resource *simplefb_parse_dt_reserved_mem(struct device *dev)
+{
+	return NULL;
+}
+#endif
+
 static int simplefb_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -290,6 +315,8 @@ static int simplefb_probe(struct platform_device *pdev)
 		return ret;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!mem)
+		mem = simplefb_parse_dt_reserved_mem(&pdev->dev);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		return -EINVAL;
