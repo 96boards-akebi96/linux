@@ -285,6 +285,11 @@ static struct resource *simplefb_parse_dt_reserved_mem(struct device *dev)
 	if (ret < 0)
 		return NULL;
 
+	if (of_find_property(np, "no-map", NULL) == NULL) {
+		dev_err(dev, "Can't apply mapped reserved-memory\n");
+		return NULL;
+	}
+
 	return &res;
 }
 #else
