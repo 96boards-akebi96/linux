@@ -191,6 +191,8 @@ static void sdhci_cdns_phy_init(void __iomem *ioaddr)
 	sd4_set_dlyvr(ioaddr, REG_DELAY_MMC_LEGACY, 9);
 	sd4_set_dlyvr(ioaddr, REG_DELAY_MMC_SDR, 2);
 	sd4_set_dlyvr(ioaddr, REG_DELAY_MMC_DDR, 3);
+	sd4_set_dlyvr(ioaddr, 0xb, 21);
+	sd4_set_dlyvr(ioaddr, 0xc, 21);
 }
 
 static int sdhci_cdns_probe(struct platform_device *pdev)
