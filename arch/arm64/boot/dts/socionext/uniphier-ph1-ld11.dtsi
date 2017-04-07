@@ -443,7 +443,7 @@
 			interrupts = <0 244 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_usb1>;
-			clocks = <&mio 5>, <&mio 8>, <&sysctrl 23>;
+			clocks = <&mio 5>, <&mio 8>, <&sysctrl 22>;
 			phys = <&usbphy>;
 			phy-names = "usb";
 			has-transaction-translator;
@@ -456,7 +456,7 @@
 			interrupts = <0 245 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_usb2>;
-			clocks = <&mio 6>, <&mio 8>;
+			clocks = <&mio 6>, <&mio 8>, <&sysctrl 23>;
 			phys = <&usbphy>;
 			phy-names = "usb";
 			has-transaction-translator;
