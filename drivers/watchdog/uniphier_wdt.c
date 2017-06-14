@@ -6,232 +6,164 @@
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * Based on mtk_wdt.c
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
-#include <linux/io.h>
+#include <linux/bitops.h>
+#include <linux/mfd/syscon.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/regmap.h>
 #include <linux/watchdog.h>
-#include <linux/delay.h>
 
+/* WDT timer setting register */
+#define WDTTIMSET			0x3004
+#define   WDTTIMSET_PERIOD_MASK		(0xf << 0)
+#define   WDTTIMSET_PERIOD_1_SEC	(0x3 << 0)
 
-#define WDTTIMSET_OFFSET		0x00000004
-#define WDTTIMSET_WDTPRD		(0xf << 0)
-#define WDTTIMSET_WDTPRD_0_125_SEC	(0x0 << 0)
-#define WDTTIMSET_WDTPRD_0_25_SEC	(0x1 << 0)
-#define WDTTIMSET_WDTPRD_0_5_SEC	(0x2 << 0)
-#define WDTTIMSET_WDTPRD_1_SEC		(0x3 << 0)
-#define WDTTIMSET_WDTPRD_2_SEC		(0x4 << 0)
-#define WDTTIMSET_WDTPRD_4_SEC		(0x5 << 0)
-#define WDTTIMSET_WDTPRD_8_SEC		(0x6 << 0)
-#define WDTTIMSET_WDTPRD_16_SEC		(0x7 << 0)
-#define WDTTIMSET_WDTPRD_32_SEC		(0x8 << 0)
-#define WDTTIMSET_WDTPRD_64_SEC		(0x9 << 0)
-#define WDTTIMSET_WDTPRD_128_SEC	(0xa << 0)
-#ifndef __ASSEMBLY__
-#define SEC_TO_WDTTIMSET_WDTPRD(sec) \
-		(((fls(sec) - 1) << 0) + WDTTIMSET_WDTPRD_1_SEC)
-#endif /* !__ASSEMBLY__ */
+/* WDT reset selection register */
+#define WDTRSTSEL			0x3008
+#define   WDTRSTSEL_RSTSEL_MASK		(0x3 << 0)
+#define   WDTRSTSEL_RSTSEL_BOTH		(0x0 << 0)
+#define   WDTRSTSEL_RSTSEL_IRQ_ONLY	(0x2 << 0)
 
-#define WDTRSTSEL_OFFSET		0x00000008
-#define WDTRSTSEL_WDTRSTSEL		(0x3 << 0)
-#define WDTRSTSEL_WDTRSTSEL_BOTH	(0x0 << 0)
-#define WDTRSTSEL_WDTRSTSEL_IRQ_ONLY	(0x2 << 0)
+/* WDT control register */
+#define WDTCTRL				0x300c
+#define   WDTCTRL_STATUS		BIT(8)
+#define   WDTCTRL_CLEAR			BIT(1)
+#define   WDTCTRL_ENABLE		BIT(0)
 
-#define WDTCTRL_OFFSET			0x0000000c
-#define WDTCTRL_WDTST			(0x1 << 8)
-#define WDTCTRL_WDTST_STOPPED		(0x0 << 8)
-#define WDTCTRL_WDTST_WORKING		(0x1 << 8)
-#define WDTCTRL_WDTCLR			(0x1 << 1)
-#define WDTCTRL_WDTCLR_STOP		(0x0 << 1)
-#define WDTCTRL_WDTCLR_INIT		(0x1 << 1)
-#define WDTCTRL_WDTEN			(0x1 << 0)
-#define WDTCTRL_WDTEN_DISABLE		(0x0 << 0)
-#define WDTCTRL_WDTEN_ENABLE		(0x1 << 0)
+#define SEC_TO_WDTTIMSET_PRD(sec) \
+		(ilog2(sec) + WDTTIMSET_PERIOD_1_SEC)
 
-#define WDTCLR_MINIMUM_INTERVAL		61 /* usec */
+#define WDTST_TIMEOUT			1000 /* usec */
 
-#define WDT_TIMER_MARGIN		64	/* Default is 64 seconds */
+#define WDT_DEFAULT_TIMEOUT		64   /* Default is 64 seconds */
 #define WDT_PERIOD_MIN			1
 #define WDT_PERIOD_MAX			128
 
-static unsigned int timeout = WDT_TIMER_MARGIN;
+static unsigned int timeout = 0;
 static bool nowayout = WATCHDOG_NOWAYOUT;
 
 struct uniphier_wdt_dev {
 	struct watchdog_device wdt_dev;
-	void __iomem	*base;	/* virtual address */
-	spinlock_t	lock;
+	struct regmap	*regmap;
 };
 
 /*
  * UniPhier Watchdog operations
  */
-
 static int uniphier_watchdog_ping(struct watchdog_device *w)
 {
-	struct uniphier_wdt_dev *wdev= watchdog_get_drvdata(w);
-	void __iomem *base = wdev->base;
-	unsigned long flags;
-
-	spin_lock_irqsave(&wdev->lock, flags);
+	struct uniphier_wdt_dev *wdev = watchdog_get_drvdata(w);
+	unsigned int val;
+	int ret;
 
 	/* Clear counter */
-	writel(WDTCTRL_WDTCLR_INIT | WDTCTRL_WDTEN_ENABLE,
-	       base + WDTCTRL_OFFSET);
-	udelay(WDTCLR_MINIMUM_INTERVAL);
+	ret = regmap_write_bits(wdev->regmap, WDTCTRL,
+				WDTCTRL_CLEAR, WDTCTRL_CLEAR);
+	if (!ret)
+		/*
+		 * As SoC specification, after clear counter,
+		 * it needs to wait until counter status is 1.
+		 */
+		ret = regmap_read_poll_timeout(wdev->regmap, WDTCTRL, val,
+					       (val & WDTCTRL_STATUS),
+					       0, WDTST_TIMEOUT);
 
-	while ((readl(base + WDTCTRL_OFFSET) & WDTCTRL_WDTST)
-	       != WDTCTRL_WDTST_WORKING);
-
-	spin_unlock_irqrestore(&wdev->lock, flags);
-
-	return 0;
+	return ret;
 }
 
-static int __uniphier_watchdog_start(void __iomem *base, unsigned int sec)
+static int __uniphier_watchdog_start(struct regmap *regmap, unsigned int sec)
 {
-	if ((readl(base + WDTCTRL_OFFSET) & WDTCTRL_WDTST)
-	    != WDTCTRL_WDTST_STOPPED) {
-		/* Disable and stop watchdog */
-		writel(WDTCTRL_WDTEN_DISABLE, base + WDTCTRL_OFFSET);
+	unsigned int val;
+	int ret;
 
-		while ((readl(base + WDTCTRL_OFFSET) & WDTCTRL_WDTST)
-		       != WDTCTRL_WDTST_STOPPED);
-	}
+	ret = regmap_read_poll_timeout(regmap, WDTCTRL, val,
+				       !(val & WDTCTRL_STATUS),
+				       0, WDTST_TIMEOUT);
+	if (ret)
+		return ret;
 
 	/* Setup period */
-	writel(SEC_TO_WDTTIMSET_WDTPRD(sec), base + WDTTIMSET_OFFSET);
+	ret = regmap_write(regmap, WDTTIMSET,
+			   SEC_TO_WDTTIMSET_PRD(sec));
+	if (ret)
+		return ret;
 
 	/* Enable and clear watchdog */
-	writel(WDTCTRL_WDTEN_ENABLE | WDTCTRL_WDTCLR_INIT,
-	       base + WDTCTRL_OFFSET);
-	udelay(WDTCLR_MINIMUM_INTERVAL);
+	ret = regmap_write(regmap, WDTCTRL, WDTCTRL_ENABLE | WDTCTRL_CLEAR);
+	if (!ret)
+		/*
+		 * As SoC specification, after clear counter,
+		 * it needs to wait until counter status is 1.
+		 */
+		ret = regmap_read_poll_timeout(regmap, WDTCTRL, val,
+					       (val & WDTCTRL_STATUS),
+					       0, WDTST_TIMEOUT);
 
-	while ((readl(base + WDTCTRL_OFFSET) & WDTCTRL_WDTST)
-	       != WDTCTRL_WDTST_WORKING);
+	return ret;
+}
 
-	return 0;
+static int __uniphier_watchdog_stop(struct regmap *regmap)
+{
+	/* Disable and stop watchdog */
+	return regmap_write_bits(regmap, WDTCTRL, WDTCTRL_ENABLE, 0);
+}
+
+static int __uniphier_watchdog_restart(struct regmap *regmap, unsigned int sec)
+{
+	int ret;
+
+	ret = __uniphier_watchdog_stop(regmap);
+	if (ret)
+		return ret;
+
+	return __uniphier_watchdog_start(regmap, sec);
 }
 
 static int uniphier_watchdog_start(struct watchdog_device *w)
 {
-	struct uniphier_wdt_dev *wdev= watchdog_get_drvdata(w);
-	void __iomem *base = wdev->base;
+	struct uniphier_wdt_dev *wdev = watchdog_get_drvdata(w);
 	unsigned int tmp_timeout;
-	unsigned long flags;
-	int ret;
 
-	spin_lock_irqsave(&wdev->lock, flags);
+	tmp_timeout = roundup_pow_of_two(w->timeout);
 
-	tmp_timeout = 1 << (fls(w->timeout) - 1);
-	if (tmp_timeout != w->timeout) {
-		tmp_timeout <<= 1;
-	}
-
-	ret = __uniphier_watchdog_start(base, tmp_timeout);
-
-	spin_unlock_irqrestore(&wdev->lock, flags);
-
-	if (ret) {
-		dev_err(w->parent, "cannot start watchdog(%d)\n", ret);
-		return ret;
-	}
-
-	dev_info(w->parent, "watchdog timer started."
-		" timeout=%d sec (nowayout=%d)\n",
-		tmp_timeout, nowayout);
-
-	return 0;
-}
-
-static int __uniphier_watchdog_stop(void __iomem *base)
-{
-	if ((readl(base + WDTCTRL_OFFSET) & WDTCTRL_WDTST)
-	    == WDTCTRL_WDTST_STOPPED) {
-		return 0;
-	}
-
-	/* Disable and stop watchdog */
-	writel(WDTCTRL_WDTEN_DISABLE, base + WDTCTRL_OFFSET);
-
-	while ((readl(base + WDTCTRL_OFFSET) & WDTCTRL_WDTST)
-	       != WDTCTRL_WDTST_STOPPED);
-
-	return 0;
+	return __uniphier_watchdog_start(wdev->regmap, tmp_timeout);
 }
 
 static int uniphier_watchdog_stop(struct watchdog_device *w)
 {
-	struct uniphier_wdt_dev *wdev= watchdog_get_drvdata(w);
-	void __iomem *base = wdev->base;
-	unsigned long flags;
-	int ret;
+	struct uniphier_wdt_dev *wdev = watchdog_get_drvdata(w);
 
-	spin_lock_irqsave(&wdev->lock, flags);
-	ret = __uniphier_watchdog_stop(base);
-	spin_unlock_irqrestore(&wdev->lock, flags);
-
-	if (ret) {
-		dev_err(w->parent, "cannot stop watchdog(%d)\n", ret);
-		return ret;
-	}
-
-	dev_info(w->parent, "watchdog timer stopped\n");
-
-	return 0;
+	return __uniphier_watchdog_stop(wdev->regmap);
 }
 
-static int uniphier_watchdog_set_timeout(struct watchdog_device *w, unsigned int t)
+static int uniphier_watchdog_set_timeout(struct watchdog_device *w,
+					 unsigned int t)
 {
-	struct uniphier_wdt_dev *wdev= watchdog_get_drvdata(w);
-	void __iomem *base = wdev->base;
-	unsigned int tmp_timeout, old_timeout;
-	unsigned long flags;
+	struct uniphier_wdt_dev *wdev = watchdog_get_drvdata(w);
+	unsigned int tmp_timeout;
 	int ret;
 
-	spin_lock_irqsave(&wdev->lock, flags);
-
-	tmp_timeout = 1 << (fls(t) - 1);
-	if (tmp_timeout != t) {
-		tmp_timeout <<= 1;
-	}
-
-	if (tmp_timeout == w->timeout) {
-		spin_unlock_irqrestore(&wdev->lock, flags);
+	tmp_timeout = roundup_pow_of_two(t);
+	if (tmp_timeout == w->timeout)
 		return 0;
+
+	if (watchdog_active(w)) {
+		ret = __uniphier_watchdog_restart(wdev->regmap, tmp_timeout);
+		if (ret)
+			return ret;
 	}
 
-	if ((readl(base + WDTCTRL_OFFSET) & WDTCTRL_WDTST)
-	    != WDTCTRL_WDTST_STOPPED) {
-		ret = __uniphier_watchdog_start(base, tmp_timeout);
-		if (ret) {
-			spin_unlock_irqrestore(&wdev->lock, flags);
-			dev_err(w->parent, "cannot restart watchdog(%d)\n", ret);
-			 return ret;
-		}
-	}
-
-	old_timeout = w->timeout;
 	w->timeout = tmp_timeout;
-
-	spin_unlock_irqrestore(&wdev->lock, flags);
-
-	dev_info(w->parent, "timeout changed(%d sec => %d sec)\n",
-		 old_timeout, tmp_timeout);
 
 	return 0;
 }
@@ -253,26 +185,15 @@ static const struct watchdog_ops uniphier_wdt_ops = {
 	.stop		= uniphier_watchdog_stop,
 	.ping		= uniphier_watchdog_ping,
 	.set_timeout	= uniphier_watchdog_set_timeout,
-	.restart	= NULL,
 };
 
 static int uniphier_wdt_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct uniphier_wdt_dev *wdev;
-	struct resource *res;
+	struct regmap *regmap;
+	struct device_node *parent;
 	int ret;
-
-	/* Check that the timeout value is within it's range;
-	   if not reset to the default */
-	if (timeout < WDT_PERIOD_MIN || timeout > WDT_PERIOD_MAX) {
-		dev_err(dev, "%s: %d: timeout must be %d < timeout < %d, using %d\n",
-			__func__, __LINE__,
-			WDT_PERIOD_MIN - 1,
-			WDT_PERIOD_MAX + 1,
-			WDT_TIMER_MARGIN);
-		return -EINVAL;
-	}
 
 	wdev = devm_kzalloc(dev, sizeof(*wdev), GFP_KERNEL);
 	if (!wdev)
@@ -280,29 +201,34 @@ static int uniphier_wdt_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, wdev);
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	wdev->base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(wdev->base))
-		return PTR_ERR(wdev->base);
+	parent = of_get_parent(dev->of_node); /* parent should be syscon node */
+	regmap = syscon_node_to_regmap(parent);
+	of_node_put(parent);
+	if (IS_ERR(regmap))
+		return PTR_ERR(regmap);
 
+	wdev->regmap = regmap;
 	wdev->wdt_dev.info = &uniphier_wdt_info;
 	wdev->wdt_dev.ops = &uniphier_wdt_ops;
-	wdev->wdt_dev.timeout = WDT_TIMER_MARGIN;
 	wdev->wdt_dev.max_timeout = WDT_PERIOD_MAX;
 	wdev->wdt_dev.min_timeout = WDT_PERIOD_MIN;
 	wdev->wdt_dev.parent = dev;
 
-	watchdog_init_timeout(&wdev->wdt_dev, timeout, dev);
+	if (watchdog_init_timeout(&wdev->wdt_dev, timeout, dev) < 0) {
+		wdev->wdt_dev.timeout = WDT_DEFAULT_TIMEOUT;
+	}
 	watchdog_set_nowayout(&wdev->wdt_dev, nowayout);
-	watchdog_set_restart_priority(&wdev->wdt_dev, 128);
+	watchdog_stop_on_reboot(&wdev->wdt_dev);
 
 	watchdog_set_drvdata(&wdev->wdt_dev, wdev);
 
 	uniphier_watchdog_stop(&wdev->wdt_dev);
-	writel(WDTRSTSEL_WDTRSTSEL_BOTH, wdev->base + WDTRSTSEL_OFFSET);
+	ret = regmap_write(wdev->regmap, WDTRSTSEL, WDTRSTSEL_RSTSEL_BOTH);
+	if (ret)
+		return ret;
 
-	ret = watchdog_register_device(&wdev->wdt_dev);
-	if (unlikely(ret))
+	ret = devm_watchdog_register_device(dev, &wdev->wdt_dev);
+	if (ret)
 		return ret;
 
 	dev_info(dev, "watchdog driver (timeout=%d sec, nowayout=%d)\n",
@@ -311,22 +237,6 @@ static int uniphier_wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void uniphier_wdt_shutdown(struct platform_device *pdev)
-{
-	struct uniphier_wdt_dev *wdev = platform_get_drvdata(pdev);
-
-	if (watchdog_active(&wdev->wdt_dev))
-		uniphier_watchdog_stop(&wdev->wdt_dev);
-}
-
-static int uniphier_wdt_remove(struct platform_device *pdev)
-{
-	struct uniphier_wdt_dev *wdev = platform_get_drvdata(pdev);
-
-	watchdog_unregister_device(&wdev->wdt_dev);
-
-	return 0;
-}
 
 #ifdef CONFIG_PM_SLEEP
 static int uniphier_wdt_suspend(struct device *dev)
@@ -365,8 +275,6 @@ static const struct dev_pm_ops uniphier_wdt_pm_ops = {
 
 static struct platform_driver uniphier_wdt_driver = {
 	.probe		= uniphier_wdt_probe,
-	.remove		= uniphier_wdt_remove,
-	.shutdown	= uniphier_wdt_shutdown,
 	.driver		= {
 		.name		= "uniphier-wdt",
 		.pm		= &uniphier_wdt_pm_ops,
@@ -376,16 +284,16 @@ static struct platform_driver uniphier_wdt_driver = {
 
 module_platform_driver(uniphier_wdt_driver);
 
-module_param(timeout, uint, 0);
+module_param(timeout, uint, 0000);
 MODULE_PARM_DESC(timeout,
-	"Watchdog timeout in seconds. (0 < timeout < 128, default="
-					__MODULE_STRING(TIMER_MARGIN) ")");
+	"Watchdog timeout seconds in power of 2. (0 < timeout < 128, default="
+				__MODULE_STRING(WDT_DEFAULT_TIMEOUT) ")");
 
-module_param(nowayout, bool, 0);
+module_param(nowayout, bool, 0000);
 MODULE_PARM_DESC(nowayout,
-		"Watchdog cannot be stopped once started (default="
+	"Watchdog cannot be stopped once started (default="
 				__MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
 
-MODULE_AUTHOR("Socionext Inc.");
+MODULE_AUTHOR("Keiji Hayashibara <hayashibara.keiji@socionext.com>");
 MODULE_DESCRIPTION("UniPhier Watchdog Device Driver");
 MODULE_LICENSE("GPL v2");
