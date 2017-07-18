@@ -39,7 +39,6 @@ struct dwc3_uniphier {
 	void __iomem		*base;
 	struct clk		*u3clk[UNIPHIER_USB_PORT_MAX];
 	struct clk		*u2clk[UNIPHIER_USB_PORT_MAX];
-	bool			vbus_supply;
 	u32			num_vbus;
 	struct dwc3_uniphier_priv_t	*priv;
 };
@@ -75,6 +74,28 @@ static inline void maskwritel(void __iomem *base, u32 offset, u32 mask, u32 valu
 	void __iomem *addr = base + offset;
 
 	writel((readl(addr) & ~(mask)) | (value & mask), addr);
+}
+
+static void dwc3_uniphier_vbus_enable(struct dwc3_uniphier *dwc3u)
+{
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+	int i;
+
+	for(i = 0; i < dwc3u->num_vbus; i++)
+		maskwritel(dwc3u->base, priv->vbus_reg + (i * 0x10),
+			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
+			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff));
+}
+
+static void dwc3_uniphier_vbus_disable(struct dwc3_uniphier *dwc3u)
+{
+	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
+	int i;
+
+	for(i = 0; i < dwc3u->num_vbus; i++)
+		maskwritel(dwc3u->base, priv->vbus_reg + (i * 0x10),
+			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
+			   (1 << priv->vbus_bit_en) | 0);
 }
 
 /* for PXs2 */
@@ -159,11 +180,8 @@ static void dwc3_uniphier_init_pxs2(struct dwc3_uniphier *dwc3u)
 	int ss_instances;
 
 	/* control the VBUS  */
-	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, priv->vbus_reg,
-			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
-			   (1 << priv->vbus_bit_en) | 0);
-	}
+	dwc3u->num_vbus = 1;
+	dwc3_uniphier_vbus_enable(dwc3u);
 
 	/* set up SS-PHY */
 	ss_instances = (readl(dwc3u->base + priv->host_cfg_reg) >> priv->host_cfg_bit_u3) & NUM_U_MASK;
@@ -201,10 +219,7 @@ static void dwc3_uniphier_exit_pxs2(struct dwc3_uniphier *dwc3u)
 		   (1 << priv->reset_bit_link), 0);
 
 	/* control the VBUS */
-	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, priv->vbus_reg,
-			   (1 << priv->vbus_bit_en), 0);
-	}
+	dwc3_uniphier_vbus_disable(dwc3u);
 
 	return;
 }
@@ -241,11 +256,8 @@ static void dwc3_uniphier_init_pro5(struct dwc3_uniphier *dwc3u)
 	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
 
 	/* control the VBUS  */
-	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, priv->vbus_reg,
-			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
-			   (1 << priv->vbus_bit_en) | 0);
-	}
+	dwc3u->num_vbus = 1;
+	dwc3_uniphier_vbus_enable(dwc3u);
 
 	/* set up PHY */
 	/* SSPHY Reference Clock Enable for SS function */
@@ -279,10 +291,7 @@ static void dwc3_uniphier_exit_pro5(struct dwc3_uniphier *dwc3u)
 		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu), 0);
 
 	/* control the VBUS */
-	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, priv->vbus_reg,
-			   (1 << priv->vbus_bit_en), 0);
-	}
+	dwc3_uniphier_vbus_disable(dwc3u);
 
 	return;
 }
@@ -338,11 +347,8 @@ static void dwc3_uniphier_init_pro4(struct dwc3_uniphier *dwc3u)
 	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
 
 	/* control the VBUS  */
-	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, priv->vbus_reg,
-			   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
-			   (1 << priv->vbus_bit_en) | 0);
-	}
+	dwc3u->num_vbus = 1;
+	dwc3_uniphier_vbus_enable(dwc3u);
 
 	/* set up SS-PHY */
 	vptr_i = dwc3u->base + priv->u3phy_testi_reg;
@@ -379,10 +385,7 @@ static void dwc3_uniphier_exit_pro4(struct dwc3_uniphier *dwc3u)
 		   (1 << priv->reset_bit_link) | (1 << priv->reset_bit_iommu), 0);
 
 	/* control the VBUS */
-	if (!dwc3u->vbus_supply){
-		maskwritel(dwc3u->base, priv->vbus_reg,
-			   (1 << priv->vbus_bit_en), 0);
-	}
+	dwc3_uniphier_vbus_disable(dwc3u);
 
 	return;
 }
@@ -555,8 +558,6 @@ static void hs_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int hs_instances)
 
 static void dwc3_uniphier_init_ld20(struct dwc3_uniphier *dwc3u)
 {
-	int i;
-
 	struct device_node *clk_node;
 	void __iomem *vptr;
 	u32 rstctl_mask;
@@ -568,9 +569,6 @@ static void dwc3_uniphier_init_ld20(struct dwc3_uniphier *dwc3u)
 	/* get the number of HS/SS port from the HW default value */
 	hs_instances = (readl(dwc3u->base + priv->host_cfg_reg) >> priv->host_cfg_bit_u2) & NUM_U_MASK;
 	ss_instances = (readl(dwc3u->base + priv->host_cfg_reg) >> priv->host_cfg_bit_u3) & NUM_U_MASK;
-
-	/* number of VBUS */
-	dwc3u->num_vbus = hs_instances;
 
 	/* 2nd reset by SoC RSTCTL (do after reference clcck beocmes stable) */
 	clk_node = of_parse_phandle(dwc3u->dev->of_node, "clocks", 0);
@@ -593,14 +591,8 @@ static void dwc3_uniphier_init_ld20(struct dwc3_uniphier *dwc3u)
 	}
 
 	/* control the VBUS */
-	if (dwc3u->vbus_supply){
-		for(i=0; i < dwc3u->num_vbus; i++) {
-			/* enable the control and turn-on the VBUS */
-			maskwritel(dwc3u->base, priv->vbus_reg + (i * 0x10),
-				   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff),
-				   (1 << priv->vbus_bit_en) | (1 << priv->vbus_bit_onoff));
-		}
-	}
+	dwc3u->num_vbus = hs_instances;
+	dwc3_uniphier_vbus_enable(dwc3u);
 
 	/* set up SS-PHY */
 	ss_phy_setup_ld20(dwc3u, ss_instances);
@@ -622,7 +614,6 @@ static void dwc3_uniphier_init_ld20(struct dwc3_uniphier *dwc3u)
 
 static void dwc3_uniphier_exit_ld20(struct dwc3_uniphier *dwc3u)
 {
-	int i;
 	struct dwc3_uniphier_priv_t *priv = dwc3u->priv;
 
 	/* reset */
@@ -630,13 +621,7 @@ static void dwc3_uniphier_exit_ld20(struct dwc3_uniphier *dwc3u)
 		   (1 << priv->reset_bit_link), 0);
 
 	/* control the VBUS */
-	if (dwc3u->vbus_supply){
-		for(i=0; i < dwc3u->num_vbus; i++) {
-			/* disable the control */
-			maskwritel(dwc3u->base, priv->vbus_reg + (i * 0x10),
-				   (1 << priv->vbus_bit_en), 0);
-		}
-	}
+	dwc3_uniphier_vbus_disable(dwc3u);
 
 	return;
 }
@@ -673,7 +658,6 @@ static int dwc3_uniphier_probe(struct platform_device *pdev)
 
 	dwc3u->dev         = dev;
 	dwc3u->base        = base;
-	dwc3u->vbus_supply = of_property_read_bool(node, "vbus-supply");
 	dwc3u->priv        = (struct dwc3_uniphier_priv_t *)of_id->data;
 
 	/* clk control */
