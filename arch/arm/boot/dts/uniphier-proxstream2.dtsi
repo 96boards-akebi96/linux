@@ -465,7 +465,6 @@
 		clock-names = "u3clk0", "u3clk1", "u2clk0";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		vbus-supply;
 		ranges;
 		dwc3@65a00000 {
 			compatible = "snps,dwc3";
@@ -486,7 +485,6 @@
 		clock-names = "u3clk0", "u2clk0";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		vbus-supply;
 		ranges;
 		dwc3@65c00000 {
 			compatible = "snps,dwc3";
