@@ -26,6 +26,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
 #include <linux/thermal.h>
 
 #include "thermal_core.h"
@@ -95,6 +96,7 @@ struct uniphier_tm_dev {
 	struct device *dev;
 	void __iomem  *base;
 	bool alert_en[ALERT_CH_NUM];
+	u32 alert_temp[ALERT_CH_NUM];
 	struct thermal_zone_device *tz_dev;
 	const struct uniphier_tm_soc_data *data;
 };
@@ -313,6 +315,7 @@ static int uniphier_tm_probe(struct platform_device *pdev)
 			crit_temp = trips[i].temperature;
 		uniphier_tm_set_alert(tdev, i, trips[i].temperature);
 		tdev->alert_en[i] = true;
+		tdev->alert_temp[i] = trips[i].temperature;
 	}
 	if (crit_temp > CRITICAL_TEMP_LIMIT) {
 		dev_err(dev, "critical trip is over limit(>%d), or not set\n",
@@ -345,6 +348,34 @@ static int uniphier_tm_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int __maybe_unused uniphier_tm_suspend(struct device *dev)
+{
+	struct uniphier_tm_dev *tdev = dev_get_drvdata(dev);
+
+	uniphier_tm_disable_sensor(tdev);
+
+	return 0;
+}
+
+static int __maybe_unused uniphier_tm_resume(struct device *dev)
+{
+	struct uniphier_tm_dev *tdev = dev_get_drvdata(dev);
+	int i;
+
+	uniphier_tm_initialize_sensor(tdev);
+
+	for (i = 0; i < ALERT_CH_NUM; i++)
+		if (tdev->alert_en[i])
+			uniphier_tm_set_alert(tdev, i,
+					      tdev->alert_temp[i]);
+
+	uniphier_tm_enable_sensor(tdev);
+
+	return 0;
+}
+#endif
+
 static const struct uniphier_tm_soc_data uniphier_pxs2_tm_data = {
 	.block_base      = 0x0000,
 	.tmod_setup_addr = 0x0904,
@@ -370,11 +401,15 @@ static const struct of_device_id uniphier_tm_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, uniphier_tm_dt_ids);
 
+static SIMPLE_DEV_PM_OPS(uniphier_tm_pm_ops,
+			 uniphier_tm_suspend, uniphier_tm_resume);
+
 static struct platform_driver uniphier_tm_driver = {
 	.probe = uniphier_tm_probe,
 	.remove = uniphier_tm_remove,
 	.driver = {
 		.name = "uniphier-thermal",
+		.pm = &uniphier_tm_pm_ops,
 		.of_match_table = uniphier_tm_dt_ids,
 	},
 };
