@@ -3040,6 +3040,7 @@ static int nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 	while (1) {
 		int ret2;
 
+		instr->fail_addr = MTD_FAIL_ADDR_UNKNOWN;
 		ret = nand_erase_nand(mtd, instr, 0);
 		if (MTD_FAIL_ADDR_UNKNOWN ==  instr->fail_addr) {
 			break;
@@ -3052,8 +3053,6 @@ static int nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 		} else if (ret2 < 0) {
 			BUG();
 		}
-
-		instr->fail_addr = MTD_FAIL_ADDR_UNKNOWN;
 	}
 
 	/* Deselect and wake up anyone waiting on the device */
