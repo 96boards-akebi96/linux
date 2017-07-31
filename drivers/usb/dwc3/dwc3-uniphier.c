@@ -779,12 +779,98 @@ static const struct of_device_id of_dwc3_match[] = {
 };
 MODULE_DEVICE_TABLE(of, of_dwc3_match);
 
+#ifdef CONFIG_PM_SLEEP
+static int dwc3_uniphier_suspend(struct device *dev)
+{
+	struct dwc3_uniphier	*dwc3u = dev_get_drvdata(dev);
+	int i;
+
+	if (dwc3u->priv->exit) {
+		(dwc3u->priv->exit)(dwc3u);
+	}
+
+	for(i=0;i<UNIPHIER_USB_PORT_MAX;i++) {
+		if (dwc3u->u3clk[i]) {
+			clk_disable_unprepare(dwc3u->u3clk[i]);
+		}
+		if (dwc3u->u2clk[i]) {
+			clk_disable_unprepare(dwc3u->u2clk[i]);
+		}
+	}
+	return 0;
+}
+
+static int dwc3_uniphier_resume(struct device *dev)
+{
+	struct dwc3_uniphier	*dwc3u = dev_get_drvdata(dev);
+
+	int ret;
+	int i;
+
+	/* enable clk */
+	for(i=0;i<UNIPHIER_USB_PORT_MAX;i++) {
+		if (dwc3u->u3clk[i]) {
+			ret = clk_prepare_enable(dwc3u->u3clk[i]);
+			if (ret) {
+				dev_err(dwc3u->dev, "failed to enable usb3 clock\n");
+				goto err_clks;
+			}
+		}
+		if (dwc3u->u2clk[i]) {
+			ret = clk_prepare_enable(dwc3u->u2clk[i]);
+			if (ret) {
+				dev_err(dwc3u->dev, "failed to enable usb2 clock\n");
+				goto err_clks;
+			}
+		}
+	}
+
+	/* initialize SoC glue */
+	if (dwc3u->priv->init) {
+		(dwc3u->priv->init)(dwc3u);
+	}
+
+	if (ret) {
+		dev_err(dwc3u->dev, "failed to register core - %d\n", ret);
+		goto err_dwc3;
+	}
+
+	return 0;
+
+err_dwc3:
+	if (dwc3u->priv->exit) {
+		(dwc3u->priv->exit)(dwc3u);
+	}
+
+err_clks:
+	/* disable clk */
+	for(i=0;i<UNIPHIER_USB_PORT_MAX;i++) {
+		if (dwc3u->u3clk[i])
+			clk_disable_unprepare(dwc3u->u3clk[i]);
+		if (dwc3u->u2clk[i])
+			clk_disable_unprepare(dwc3u->u2clk[i]);
+	}
+
+	return ret;
+}
+
+static const struct dev_pm_ops dwc3_uniphier_dev_pm_ops = {
+
+	SET_SYSTEM_SLEEP_PM_OPS(dwc3_uniphier_suspend, dwc3_uniphier_resume)
+};
+
+#define DEV_PM_OPS	(&dwc3_uniphier_dev_pm_ops)
+#else
+#define DEV_PM_OPS	NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver dwc3_uniphier_driver = {
 	.probe		= dwc3_uniphier_probe,
 	.remove		= dwc3_uniphier_remove,
 	.driver		= {
 		.name	= "uniphier-dwc3",
 		.of_match_table	= of_dwc3_match,
+		.pm	= DEV_PM_OPS,
 	},
 };
 
