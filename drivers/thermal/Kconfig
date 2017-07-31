@@ -392,11 +392,12 @@ config QCOM_SPMI_TEMP_ALARM
 	  temperature based upon the over temperature stage value.
 
 config UNIPHIER_THERMAL
-	tristate "Socionext UniPhier thermal management"
-	depends on ARCH_UNIPHIER
+	tristate "Socionext UniPhier thermal driver"
+	depends on ARCH_UNIPHIER || COMPILE_TEST
+	depends on THERMAL_OF
 	help
-	  Enable this to support thermal reporting on UniPhier SoC.
-	  The driver supports only CPU thermal zone to provide reading temperture,
-	  trip points, etc.
+	  Enable this to plug in UniPhier on-chip PVT thermal driver into the
+	  thermal framework. The driver supports CPU thermal zone temperature
+	  reporting and a couple of trip points.
 
 endif
