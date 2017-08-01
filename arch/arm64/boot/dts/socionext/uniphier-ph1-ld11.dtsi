@@ -414,11 +414,12 @@
 		};
 
 		emmc: sdhc@5a000000 {
-			compatible = "cdns,sd4hc";
+			compatible = "socionext,uniphier-sd4hc", "cdns,sd4hc";
 			reg = <0x5a000000 0x400>;
 			interrupts = <0 78 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_emmc_1v8>;
+			clocks = <&refclk>; /* fake */
 			bus-width = <8>;
 			mmc-hs200-1_8v;
 			cdns,phy-input-delay-legacy = <4>;
