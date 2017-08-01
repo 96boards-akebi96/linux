@@ -28,6 +28,8 @@
 struct uniphier_gpio_priv {
 	struct of_mm_gpio_chip mmchip;
 	spinlock_t lock;
+	u32 data;
+	u32 dir;
 };
 
 static void uniphier_gpio_offset_write(struct gpio_chip *chip, unsigned offset,
@@ -166,6 +168,32 @@ static int uniphier_gpio_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int __maybe_unused uniphier_gpio_suspend(struct device *dev)
+{
+	struct uniphier_gpio_priv *priv = dev_get_drvdata(dev);
+	struct of_mm_gpio_chip *mmchip = &priv->mmchip;
+
+	priv->data = readl(mmchip->regs + UNIPHIER_GPIO_REG_DATA);
+	priv->dir = readl(mmchip->regs + UNIPHIER_GPIO_REG_DIR);
+
+	return 0;
+}
+
+static int __maybe_unused uniphier_gpio_resume(struct device *dev)
+{
+	struct uniphier_gpio_priv *priv = dev_get_drvdata(dev);
+	struct of_mm_gpio_chip *mmchip = &priv->mmchip;
+
+	writel(priv->data, mmchip->regs + UNIPHIER_GPIO_REG_DATA);
+	writel(priv->dir, mmchip->regs + UNIPHIER_GPIO_REG_DIR);
+
+	return 0;
+}
+
+static const struct dev_pm_ops uniphier_gpio_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(uniphier_gpio_suspend, uniphier_gpio_resume)
+};
+
 static const struct of_device_id uniphier_gpio_match[] = {
 	{ .compatible = "socionext,uniphier-gpio" },
 	{ /* sentinel */ }
@@ -178,6 +206,7 @@ static struct platform_driver uniphier_gpio_driver = {
 	.driver = {
 		.name = "uniphier-gpio",
 		.of_match_table = uniphier_gpio_match,
+		.pm = &uniphier_gpio_pm_ops,
 	},
 };
 module_platform_driver(uniphier_gpio_driver);
