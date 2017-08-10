@@ -500,12 +500,13 @@ static void uniphier_sd_get_response(struct uniphier_sd_priv *priv,
 		u32 bit_71_40 = readl(priv->regbase + UNIPHIER_SD_RSP32);
 		u32 bit_39_8 = readl(priv->regbase + UNIPHIER_SD_RSP10);
 
-		cmd->resp[0] = (bit_127_104 & 0xffffff) << 8 |
-							(bit_103_72 & 0xff);
-		cmd->resp[1] = (bit_103_72 & 0xffffff) << 8 |
-							(bit_71_40 & 0xff);
-		cmd->resp[2] = (bit_71_40 & 0xffffff) << 8 | (bit_39_8 & 0xff);
-		cmd->resp[3] = (bit_39_8 & 0xffffff) << 8;
+		cmd->resp[0] = ((bit_127_104 & 0x00ffffff) << 8) |
+			       ((bit_103_72  & 0xff000000) >> 24);
+		cmd->resp[1] = ((bit_103_72  & 0x00ffffff) << 8) |
+			       ((bit_71_40   & 0xff000000) >> 24);
+		cmd->resp[2] = ((bit_71_40   & 0x00ffffff) << 8) |
+			       ((bit_39_8    & 0xff000000) >> 24);
+		cmd->resp[3] = (bit_39_8     & 0xffffff)   << 8;
 	} else {
 		/* bit 39-8 */
 		cmd->resp[0] = readl(priv->regbase + UNIPHIER_SD_RSP10);
