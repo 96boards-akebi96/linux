@@ -201,3 +201,11 @@ config GOLDFISH_PIC
        help
          Say yes here to enable Goldfish interrupt controller driver used
          for Goldfish based virtual platforms.
+
+config IRQ_UNIPHIER_AIDET
+	bool "UniPhier AIDET support" if COMPILE_TEST
+	depends on ARCH_UNIPHIER || COMPILE_TEST
+	default ARCH_UNIPHIER
+	select IRQ_DOMAIN_HIERARCHY
+	help
+	  Support for the UniPhier AIDET (ARM Interrupt Detector).
