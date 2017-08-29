@@ -1429,7 +1429,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 {
 	struct ion_heap *heap = s->private;
 	struct ion_device *dev = heap->dev;
-	struct rb_node *n;
+	struct rb_node *n, *nb;
 	size_t total_size = 0;
 	size_t total_orphaned_size = 0;
 
@@ -1453,6 +1453,58 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			seq_printf(s, "%16s %16u %16zu\n", client->name,
 				   client->pid, size);
 		}
+	}
+	seq_puts(s, "----------------------------------------------------\n");
+
+	seq_printf(s, "%16s %16s %16s %19s\n",
+		"client", "pid", "size", "phys");
+	seq_puts(s, "----------------------------------------------------\n");
+
+	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
+		struct ion_client *client = rb_entry(n, struct ion_client,
+						     node);
+		size_t size = ion_debug_heap_total(client, heap->id);
+		const char *name;
+
+		if (!size)
+			continue;
+
+		mutex_lock(&client->lock);
+		if (client->task) {
+			char task_comm[TASK_COMM_LEN];
+
+			get_task_comm(task_comm, client->task);
+			name = task_comm;
+		} else {
+			name = client->name;
+		}
+
+		for (nb = rb_first(&client->handles); nb; nb = rb_next(nb)) {
+			struct ion_handle *handle = rb_entry(nb,
+							     struct ion_handle,
+							     node);
+
+			if (handle->buffer->heap->id != heap->id)
+				continue;
+
+			if (handle->buffer->heap->ops->phys) {
+				ion_phys_addr_t addr;
+				size_t len;
+
+				handle->buffer->heap->ops->phys(heap,
+					handle->buffer, &addr, &len);
+				seq_printf(s,
+					"%16s %16u %16zu %09llx-%09llx\n",
+					name,
+					client->pid, handle->buffer->size,
+					(u64)addr, (u64)(addr + len));
+			} else {
+				seq_printf(s,
+					"%16s %16u %16zu\n", name,
+					client->pid, handle->buffer->size);
+			}
+		}
+		mutex_unlock(&client->lock);
 	}
 	seq_puts(s, "----------------------------------------------------\n");
 	seq_puts(s, "orphaned allocations (info is from last known client):\n");
@@ -1479,6 +1531,29 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	if (heap->flags & ION_HEAP_FLAG_DEFER_FREE)
 		seq_printf(s, "%16s %16zu\n", "deferred free",
 				heap->free_list_size);
+	seq_puts(s, "----------------------------------------------------\n");
+
+	seq_puts(s, "all buffers (info is from last known client):\n");
+	mutex_lock(&dev->buffer_lock);
+	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
+		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
+						     node);
+		if (buffer->heap->id != heap->id)
+			continue;
+
+		if (buffer->heap->ops->phys) {
+			ion_phys_addr_t addr;
+			size_t len;
+
+			buffer->heap->ops->phys(heap, buffer, &addr, &len);
+
+			seq_printf(s, "%16s %16u %16zu %09llx-%09llx\n",
+				buffer->task_comm,
+				buffer->pid, buffer->size,
+				(u64)addr, (u64)(addr + len));
+		}
+	}
+	mutex_unlock(&dev->buffer_lock);
 	seq_puts(s, "----------------------------------------------------\n");
 
 	if (heap->debug_show)
