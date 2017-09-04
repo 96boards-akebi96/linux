@@ -830,17 +830,7 @@ static int dwc3_uniphier_resume(struct device *dev)
 		(dwc3u->priv->init)(dwc3u);
 	}
 
-	if (ret) {
-		dev_err(dwc3u->dev, "failed to register core - %d\n", ret);
-		goto err_dwc3;
-	}
-
 	return 0;
-
-err_dwc3:
-	if (dwc3u->priv->exit) {
-		(dwc3u->priv->exit)(dwc3u);
-	}
 
 err_clks:
 	/* disable clk */
