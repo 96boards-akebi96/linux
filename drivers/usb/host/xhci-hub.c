@@ -1247,10 +1247,14 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			writel(temp | PORT_POWER, port_array[wIndex]);
 
 #ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
-			/* wIndex : 0, 1, .. , max_ports-1 */
-			temp = readl((void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
-			temp |= XHCI_USB3_VBUS_DRVVBUS_REG;
-			writel(temp, (void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+			if (xhci->vbus_regs) {
+				/* wIndex : 0, 1, .. , max_ports-1 */
+				temp = readl((void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+				temp |= XHCI_USB3_VBUS_DRVVBUS_REG;
+				writel(temp, (void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+			} else {
+				xhci_warn(xhci, "skipped VBUS operation at SetPortFeature.\n");
+			}
 #endif
 
 			temp = readl(port_array[wIndex]);
@@ -1397,10 +1401,14 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			writel(temp & ~PORT_POWER, port_array[wIndex]);
 
 #ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
-			/* wIndex : 0, 1, .. , max_ports-1 */
-			temp = readl((void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
-			temp &= ~XHCI_USB3_VBUS_DRVVBUS_REG;
-			writel(temp, (void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+			if (xhci->vbus_regs) {
+				/* wIndex : 0, 1, .. , max_ports-1 */
+				temp = readl((void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+				temp &= ~XHCI_USB3_VBUS_DRVVBUS_REG;
+				writel(temp, (void *)(((void *)xhci->vbus_regs) + 0x10 * wIndex ) );
+			} else {
+				xhci_warn(xhci, "skipped VBUS operation at ClearPortFeature.\n");
+			}
 #endif
 
 			spin_unlock_irqrestore(&xhci->lock, flags);

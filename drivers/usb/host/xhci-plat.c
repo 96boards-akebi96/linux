@@ -15,6 +15,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/usb/phy.h>
 #include <linux/slab.h>
@@ -84,6 +85,11 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	struct clk              *clk;
 	int			ret;
 	int			irq;
+#ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
+	struct device_node	*glue_node;	/* OF node for VBUS control */
+	struct resource		glue_res;	/* register resource for VBUS control */
+	u32			vbus_ofst;	/* address offset of VBUS control */
+#endif
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -175,7 +181,34 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
-	xhci->vbus_regs = ioremap_nocache(XHCI_USB3_VBUS_CONTROL_BASE, XHCI_USB3_VBUS_CONTROL_SIZE);
+	/* Get DWC3 Glue address resource info and remap VBUS register */
+	if (!pdev->dev.parent || !pdev->dev.parent->parent || !pdev->dev.parent->parent->of_node) {
+		dev_err(&pdev->dev, "couldn't get device node of DWC3 Glue\n");
+		goto disable_usb_phy;
+	}
+
+	glue_node = pdev->dev.parent->parent->of_node;	/* DWC3 Glue for VBUS control */
+	dev_dbg(&pdev->dev, "DWC3 Glue (%s) for VBUS control\n", glue_node->name);
+
+	if (of_device_is_compatible(glue_node, "socionext,ph1-pro4-dwc3")) {
+		/* Pro4 */
+		vbus_ofst = XHCI_USB3_VBUS_CONTROL_OFST_PRO4;
+	} else {
+		/* UniPhier common */
+		vbus_ofst = XHCI_USB3_VBUS_CONTROL_OFST;
+	}
+
+	if (of_address_to_resource(glue_node, 0, &glue_res) == 0) {
+		xhci->vbus_regs = ioremap_nocache(glue_res.start + vbus_ofst,
+							XHCI_USB3_VBUS_CONTROL_SIZE);
+		if (!xhci->vbus_regs) {
+			dev_err(&pdev->dev, "couldn't remap address of DWC3 Glue '%s'\n", glue_node->name);
+			goto disable_usb_phy;
+		}
+	} else {
+		dev_err(&pdev->dev, "couldn't get address of DWC3 Glue '%s'\n", glue_node->name);
+		goto disable_usb_phy;
+	}
 #endif
 
 	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
@@ -197,7 +230,9 @@ dealloc_usb2_hcd:
 
 disable_usb_phy:
 #ifdef CONFIG_USB_UNIPHIER_WA_XHCI_VBUS_WAIT
-	iounmap(xhci->vbus_regs);
+	if (xhci->vbus_regs)
+		iounmap(xhci->vbus_regs);
+	xhci->vbus_regs = 0;
 #endif
 	usb_phy_shutdown(hcd->usb_phy);
 
