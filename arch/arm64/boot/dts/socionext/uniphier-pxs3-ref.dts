@@ -131,3 +131,11 @@
 &pcie {
 	status = "okay";
 };
+
+&ahci0 {
+	status = "okay";
+};
+
+&ahci1 {
+	status = "okay";
+};

@@ -411,6 +411,78 @@
 			};
 		};
 
+		ahci0: ahci0@65600000 {
+			compatible = "socionext,uniphier-pxs3-ahci",
+				     "generic-ahci";
+			status = "disabled";
+			reg = <0x65600000 0x10000>;
+			interrupts = <0 142 4>;
+			clocks = <&sysctrl 25>;
+			resets = <&ahci0_rst 0>;
+			ports-implemented = <1>;
+			phys = <&ahci0_phy>;
+		};
+
+		ahci-glue@65700000 {
+			compatible = "socionext,uniphier-pxs3-ahci-glue",
+				     "simple-mfd";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x65700000 0x100>;
+
+			ahci0_rst: reset@0 {
+				compatible = "socionext,uniphier-pxs3-ahci-reset";
+				reg = <0x0 0x4>;
+				clock-names = "link";
+				clocks = <&sysctrl 25>;
+				#reset-cells = <1>;
+			};
+
+			ahci0_phy: phy@0x10 {
+				compatible = "socionext,uniphier-pxs3-ahci-phy";
+				reg = <0x10 0x10>;
+				clock-names = "link";
+				clocks = <&sysctrl 25>;
+				#phy-cells = <0>;
+			};
+		};
+
+		ahci1: ahci0@65800000 {
+			compatible = "socionext,uniphier-pxs3-ahci",
+				     "generic-ahci";
+			status = "disabled";
+			reg = <0x65800000 0x10000>;
+			interrupts = <0 143 4>;
+			clocks = <&sysctrl 26>;
+			resets = <&ahci1_rst 0>;
+			ports-implemented = <1>;
+			phys = <&ahci1_phy>;
+		};
+
+		ahci-glue@65900000 {
+			compatible = "socionext,uniphier-pxs3-ahci-glue",
+				     "simple-mfd";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x65900000 0x100>;
+
+			ahci1_rst: reset@0 {
+				compatible = "socionext,uniphier-pxs3-ahci-reset";
+				reg = <0x0 0x4>;
+				clock-names = "link";
+				clocks = <&sysctrl 26>;
+				#reset-cells = <1>;
+			};
+
+			ahci1_phy: phy@0x10 {
+				compatible = "socionext,uniphier-pxs3-ahci-phy";
+				reg = <0x10 0x10>;
+				clock-names = "link";
+				clocks = <&sysctrl 26>;
+				#phy-cells = <0>;
+			};
+		};
+
 		usb3_0: usb3_0@65b00000 {
 			compatible = "socionext,proxstream3-dwc3";
 			pinctrl-names = "default";
