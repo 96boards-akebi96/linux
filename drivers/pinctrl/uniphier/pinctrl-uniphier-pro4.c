@@ -1086,6 +1086,10 @@ static const unsigned usb2_pins[] = {184, 185};
 static const int usb2_muxvals[] = {0, 0};
 static const unsigned usb3_pins[] = {186, 187};
 static const int usb3_muxvals[] = {0, 0};
+static const unsigned spi0_pins[] = {199, 200, 201, 202};
+static const int spi0_muxvals[] = {11, 11, 11, 11};
+static const unsigned spi1_pins[] = {195, 196, 197, 198, 235, 238, 239};
+static const int spi1_muxvals[] = {11, 11, 11, 11, 11, 11, 11};
 static const unsigned int gpio_range_pins[] = {
 	300, 301, 302, 303, 304, 305, 306, 307,	/* PORT0x */
 	308, 309, 310, 311, 312, 313, 314, 315,	/* PORT1x */
@@ -1153,6 +1157,8 @@ static const struct uniphier_pinctrl_group uniphier_pro4_groups[] = {
 	UNIPHIER_PINCTRL_GROUP(usb1),
 	UNIPHIER_PINCTRL_GROUP(usb2),
 	UNIPHIER_PINCTRL_GROUP(usb3),
+	UNIPHIER_PINCTRL_GROUP(spi0),
+	UNIPHIER_PINCTRL_GROUP(spi1),
 	UNIPHIER_PINCTRL_GROUP_GPIO(gpio_range),
 };
 
@@ -1185,6 +1191,8 @@ static const char * const usb0_groups[] = {"usb0"};
 static const char * const usb1_groups[] = {"usb1"};
 static const char * const usb2_groups[] = {"usb2"};
 static const char * const usb3_groups[] = {"usb3"};
+static const char * const spi0_groups[] = {"spi0"};
+static const char * const spi1_groups[] = {"spi1"};
 
 static const struct uniphier_pinmux_function uniphier_pro4_functions[] = {
 	UNIPHIER_PINMUX_FUNCTION(emmc),
@@ -1208,6 +1216,8 @@ static const struct uniphier_pinmux_function uniphier_pro4_functions[] = {
 	UNIPHIER_PINMUX_FUNCTION(usb1),
 	UNIPHIER_PINMUX_FUNCTION(usb2),
 	UNIPHIER_PINMUX_FUNCTION(usb3),
+	UNIPHIER_PINMUX_FUNCTION(spi0),
+	UNIPHIER_PINMUX_FUNCTION(spi1),
 };
 
 static int uniphier_pro4_get_gpio_muxval(unsigned int pin,
