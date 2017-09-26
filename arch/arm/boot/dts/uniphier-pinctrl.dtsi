@@ -124,6 +124,21 @@
 		function = "sd1";
 	};
 
+	pinctrl_spi0: spi0_grp {
+		groups = "spi0";
+		function = "spi0";
+	};
+
+	pinctrl_spi1: spi1_grp {
+		groups = "spi1";
+		function = "spi1";
+	};
+
+	pinctrl_spi2: spi2_grp {
+		groups = "spi2";
+		function = "spi2";
+	};
+
 	pinctrl_system_bus: system_bus_grp {
 		groups = "system_bus", "system_bus_cs1";
 		function = "system_bus";
