@@ -81,6 +81,22 @@
 		cache-level = <2>;
 	};
 
+	spi0: spi@54006000 {
+		compatible = "socionext,uniphier-scssi";
+		status = "disabled";
+		reg = <0x54006000 0x100>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_spi0>;
+	};
+
+	spi1: spi@54007000 {
+		compatible = "socionext,uniphier-mcssi";
+		status = "disabled";
+		reg = <0x54007000 0x2000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_spi1>;
+	};
+
 	port0x: gpio@55000008 {
 		compatible = "socionext,uniphier-gpio";
 		reg = <0x55000008 0x8>;
