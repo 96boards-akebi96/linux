@@ -30,6 +30,8 @@
 		i2c2 = &i2c2;
 		i2c3 = &i2c3;
 		i2c6 = &i2c6;
+		spi0 = &spi0;
+		spi1 = &spi1;
 	};
 
 	memory@80000000 {
@@ -68,4 +70,26 @@
 
 &usb3_1 {
 	status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	spidev {
+		compatible = "linux,spidev";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+	};
+};
+
+&spi1 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	spidev {
+		compatible = "linux,spidev";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+	};
 };
