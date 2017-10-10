@@ -19,6 +19,11 @@
 #ifndef __LINUX_EHCI_HCD_H
 #define __LINUX_EHCI_HCD_H
 
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+#define INTERNAL_EHCI_DBGR_BASE      (0xF00)	/* EHCI DEBUG_REG BASE (from CAPLENGTH base) */
+#define INTERNAL_EHCI_VBUSWAIT_TIME      (5)	/* Vbus wait time to be stable (ms) */
+#endif /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
+
 /* definitions used for the EHCI driver */
 
 /*
@@ -134,6 +139,9 @@ struct ehci_hcd {			/* one per controller */
 	/* glue to PCI and HCD framework */
 	struct ehci_caps __iomem *caps;
 	struct ehci_regs __iomem *regs;
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+	struct ehci_dbgr __iomem *dbgr; /* vbus control register */
+#endif /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
 	struct ehci_dbg_port __iomem *debug;
 
 	__u32			hcs_params;	/* cached register copy */
@@ -266,6 +274,16 @@ struct ehci_hcd {			/* one per controller */
 	/* platform-specific data -- must come last */
 	unsigned long		priv[0] __aligned(sizeof(s64));
 };
+
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+struct ehci_dbgr {
+	/* HOST_TOP_CON: offset 0x00 */
+	u32		hosttopcon;
+#define HTP_DRVVBUS_MON		(1<<5)	/* VBUS on/off status monitor */
+#define HTP_DRVVBUS_REG		(1<<4)	/* VBUS on/off control by SW */
+#define HTP_DRVVBUS_REG_EN	(1<<3)	/* VBUS SW-control enable flag */
+} __attribute__ ((packed));
+#endif /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
 
 /* convert between an HCD pointer and the corresponding EHCI_HCD */
 static inline struct ehci_hcd *hcd_to_ehci (struct usb_hcd *hcd)

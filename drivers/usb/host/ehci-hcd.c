@@ -253,6 +253,11 @@ int ehci_reset(struct ehci_hcd *ehci)
 	dbg_cmd (ehci, "reset", command);
 	ehci_writel(ehci, command, &ehci->regs->command);
 	ehci->rh_state = EHCI_RH_HALTED;
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+	/* initialize Vbus control mode to "SW-control: Off" */
+	command = ehci_readl(ehci, &ehci->dbgr->hosttopcon);
+	ehci_writel(ehci, command & ~(HTP_DRVVBUS_REG_EN | HTP_DRVVBUS_REG), &ehci->dbgr->hosttopcon);
+#endif /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
 	ehci->next_statechange = jiffies;
 	retval = ehci_handshake(ehci, &ehci->regs->command,
 			    CMD_RESET, 0, 250 * 1000);
@@ -661,6 +666,9 @@ int ehci_setup(struct usb_hcd *hcd)
 
 	ehci->regs = (void __iomem *)ehci->caps +
 	    HC_LENGTH(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase));
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+	ehci->dbgr = (void __iomem *)ehci->caps + INTERNAL_EHCI_DBGR_BASE;
+#endif /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
 	dbg_hcs_params(ehci, "reset");
 	dbg_hcc_params(ehci, "reset");
 

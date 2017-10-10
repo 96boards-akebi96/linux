@@ -955,6 +955,16 @@ int ehci_hub_control(
 			break;
 		case USB_PORT_FEAT_POWER:
 			if (HCS_PPC(ehci->hcs_params)) {
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+				u32 tmp_htc;
+
+				/* if Vbus control mode is "SW-control: On", turn it Off */
+				tmp_htc = ehci_readl(ehci, &ehci->dbgr->hosttopcon);
+				if(tmp_htc & HTP_DRVVBUS_REG_EN){
+					ehci_writel(ehci, tmp_htc & ~HTP_DRVVBUS_REG_EN, &ehci->dbgr->hosttopcon);
+					ehci_writel(ehci, tmp_htc & ~(HTP_DRVVBUS_REG_EN | HTP_DRVVBUS_REG), &ehci->dbgr->hosttopcon);
+				}
+#endif /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
 				spin_unlock_irqrestore(&ehci->lock, flags);
 				ehci_port_power(ehci, wIndex, false);
 				spin_lock_irqsave(&ehci->lock, flags);
@@ -1194,9 +1204,38 @@ int ehci_hub_control(
 			break;
 		case USB_PORT_FEAT_POWER:
 			if (HCS_PPC(ehci->hcs_params)) {
+#ifdef CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+				u32 tmp_htc;
+
+				/* Change Vbus control mode to "SW-control: On" */
+				tmp_htc = ehci_readl(ehci, &ehci->dbgr->hosttopcon);
+				ehci_writel(ehci, tmp_htc | HTP_DRVVBUS_REG_EN, &ehci->dbgr->hosttopcon);
+
+				/* Vbus turn On by SW */
+				ehci_writel(ehci, tmp_htc | HTP_DRVVBUS_REG_EN | HTP_DRVVBUS_REG , &ehci->dbgr->hosttopcon);
+
+				/* Wait for Vbus to be stable */
+				spin_unlock_irqrestore (&ehci->lock, flags);
+				msleep(INTERNAL_EHCI_VBUSWAIT_TIME);
+				spin_lock_irqsave (&ehci->lock, flags);
+
+				/* (If Vbus SW-control is still "On") turn on PORT POWER of EHCI */
+				tmp_htc = ehci_readl(ehci, &ehci->dbgr->hosttopcon);
+				if(tmp_htc & HTP_DRVVBUS_REG_EN){
+					spin_unlock_irqrestore(&ehci->lock, flags);
+					ehci_port_power(ehci, wIndex, true);
+					spin_lock_irqsave(&ehci->lock, flags);
+				}
+
+				/* Change Vbus control mode back to "SW-control: Off" */
+				ehci_writel(ehci, tmp_htc & ~HTP_DRVVBUS_REG_EN, &ehci->dbgr->hosttopcon);
+				ehci_writel(ehci, tmp_htc & ~(HTP_DRVVBUS_REG_EN | HTP_DRVVBUS_REG), &ehci->dbgr->hosttopcon);
+
+#else /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
 				spin_unlock_irqrestore(&ehci->lock, flags);
 				ehci_port_power(ehci, wIndex, true);
 				spin_lock_irqsave(&ehci->lock, flags);
+#endif /* CONFIG_USB_UNIPHIER_WA_EHCI_VBUS_WAIT */
 			}
 			break;
 		case USB_PORT_FEAT_RESET:

@@ -44,6 +44,13 @@ config USB_UNIPHIER_WA_XHCI_VBUS_WAIT
 	---help---
 	  If unsure, say N.
 
+config USB_UNIPHIER_WA_EHCI_VBUS_WAIT
+	bool "Uniphier USB workaround for Vbus turn-ON prior to EHCI port power on"
+	depends on USB_UNIPHIER_WA
+	default y
+	---help---
+	  If unsure, say N.
+
 config USB_UNIPHIER_WA_PORT_CONTROL
 	bool "Uniphier USB workaround enabling R/W of port_status/ctrl via sysfs"
 	depends on USB_UNIPHIER_WA
