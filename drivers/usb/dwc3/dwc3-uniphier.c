@@ -662,8 +662,8 @@ static void ss_phy_setup_pxs3(struct dwc3_uniphier *dwc3u, int ss_instances)
 		vptr_i = dwc3u->base + priv->u3phy_testi_reg + (i * 0x10);
 		vptr_o = dwc3u->base + priv->u3phy_testo_reg + (i * 0x10);
 
-		/* add PXs3-suitable SS-PHY parameters here if needed */
-		/* SAMPLE CODE : pphy_test_io(vptr_i, vptr_o,  7, 0xff, 0x06); */
+		/* parameter number 11 */
+		pphy_test_io(vptr_i, vptr_o, 11, 0xff, 0x29);
 	}
 
 	return;
