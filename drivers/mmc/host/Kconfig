@@ -819,5 +819,6 @@ config MMC_MTK
 config MMC_UNIPHIER
 	tristate "UniPhier SD/MMC Host Controller support"
 	depends on ARCH_UNIPHIER
+	select MMC_TMIO_CORE
 	help
 	  This selects support for the SD/MMC Host Controller on UniPhier SoCs.
