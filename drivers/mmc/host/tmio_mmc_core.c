@@ -1253,12 +1253,14 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host)
 	 * and check the current max_req_size. And then, this will update
 	 * the max_req_size if needed as a workaround.
 	 */
+#if 0
 	if (swiotlb_max_segment()) {
 		unsigned int max_size = (1 << IO_TLB_SHIFT) * IO_TLB_SEGSIZE;
 
 		if (mmc->max_req_size > max_size)
 			mmc->max_req_size = max_size;
 	}
+#endif
 	mmc->max_seg_size = mmc->max_req_size;
 
 	_host->native_hotplug = !(mmc_can_gpio_cd(mmc) ||
