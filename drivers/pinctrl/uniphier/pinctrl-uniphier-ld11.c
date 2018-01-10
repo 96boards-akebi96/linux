@@ -512,8 +512,8 @@ static const unsigned usb2_pins[] = {50, 51};
 static const int usb2_muxvals[] = {0, 0};
 static const unsigned spi0_pins[] = {56, 57, 58, 59};
 static const int spi0_muxvals[] = {0, 0, 0, 0};
-static const unsigned spi1_pins[] = {169, 170, 171, 172};
-static const int spi1_muxvals[] = {1, 1, 1, 1};
+static const unsigned spi1_pins[] = {143, 144, 145, 146};
+static const int spi1_muxvals[] = {2, 2, 2, 2};
 static const unsigned int gpio_range0_pins[] = {
 	159, 160, 161, 162, 163, 164, 165, 166,		/* PORT0x */
 	0, 1, 2, 3, 4, 5, 6, 7,				/* PORT1x */
