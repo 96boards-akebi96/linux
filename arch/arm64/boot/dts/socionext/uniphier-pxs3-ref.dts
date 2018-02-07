@@ -115,3 +115,7 @@
 		reg = <0>;
 	};
 };
+
+&pcie {
+	status = "okay";
+};
