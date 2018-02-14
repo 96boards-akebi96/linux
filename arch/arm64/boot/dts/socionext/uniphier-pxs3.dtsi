@@ -301,7 +301,7 @@
 			cap-sd-highspeed;
 		};
 
-		soc-glue@5f800000 {
+		soc_glue: soc-glue@5f800000 {
 			compatible = "socionext,uniphier-pxs3-soc-glue",
 				     "simple-mfd", "syscon";
 			reg = <0x5f800000 0x2000>;
@@ -347,6 +347,44 @@
 			};
 		};
 
+		eth0: ethernet@65000000 {
+			compatible = "socionext,uniphier-pxs3-ave4";
+			status = "disabled";
+			reg = <0x65000000 0x8500>;
+			interrupts = <0 66 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_ether_rgmii>;
+			clock-names = "ether";
+			clocks = <&sysctrl 8>;
+			phy-mode = "rgmii";
+			local-mac-address = [00 00 00 00 00 00];
+			socionext,syscon-phy-mode = <&soc_glue 0>;
+
+			mdio0: mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+
+		eth1: ethernet@65200000 {
+			compatible = "socionext,uniphier-pxs3-ave4";
+			status = "disabled";
+			reg = <0x65200000 0x8500>;
+			interrupts = <0 67 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_ether1_rgmii>;
+			clock-names = "ether";
+			clocks = <&sysctrl 9>;
+			phy-mode = "rgmii";
+			local-mac-address = [00 00 00 00 00 00];
+			socionext,syscon-phy-mode = <&soc_glue 1>;
+
+			mdio1: mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+
 		usb3_0: usb3_0@65b00000 {
 			compatible = "socionext,proxstream3-dwc3";
 			pinctrl-names = "default";
@@ -384,7 +422,6 @@
 				tx-fifo-resize;
 			};
 		};
-
 	};
 };
 
