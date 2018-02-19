@@ -1,0 +1,43 @@
+Socionext UniPhier AHCI PHY
+
+This describes the deivcetree bindings for PHY interfaces built into
+AHCI glue layer implemented on Socionext UniPhier SoCs.
+
+Required properties:
+- compatible: Should contain one of the following:
+    "socionext,uniphier-pxs2-ahci-phy" - for PXs2 SoC
+    "socionext,uniphier-pxs3-ahci-phy" - for PXs3 SoC
+- reg: Specifies offset and length of the register set for the device.
+- #phy-cells: Must be zero.
+- clocks: A list of phandles to the clock gate for AHCI glue layer.
+	According to the clock-names, appropriate clocks are required.
+- clock-names:
+	"link"        - for PXs2 SoC
+	"phy", "link" - for PXs3 SoC
+- resets: A list of phandles for the reset control for AHCI glue layer.
+	According to the reset-names, appropriate resets are required.
+- reset-names:
+	"phy", "link" - for PXs2 and PXs3 SoCs
+
+Refer to phy/phy-bindings.txt for the generic PHY binding properties.
+
+Example:
+
+	ahci-glue@65700000 {
+		compatible = "socionext,uniphier-pxs3-ahci-glue",
+			     "simple-mfd";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0x65700000 0x100>;
+
+		ahci_phy: phy@10 {
+			compatible = "socionext,uniphier-pxs3-ahci-phy";
+			reg = <0x10 0x10>;
+			clock-names = "link", "phy";
+			clocks = <&sys_clk 28>, <&sys_clk 30>;
+			reset-names = "link", "phy";
+			resets = <&sys_rst 28>, <&sys_rst 30>;
+			#phy-cells = <0>;
+		};
+		...
+	};
