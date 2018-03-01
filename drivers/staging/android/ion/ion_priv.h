@@ -131,6 +131,14 @@ struct ion_heap_ops {
  */
 #define ION_HEAP_FLAG_DEFER_FREE (1 << 0)
 
+#define ION_HEAP_FLAG_KEEP (1 << 1)	/*
+					 * keep contents in heap.
+					 * The ion core does not clear the
+					 * contents when free the heap.
+					 * This is useful for the system has
+					 * other fast clear method.
+					 */
+
 /**
  * private flags - flags internal to ion
  */

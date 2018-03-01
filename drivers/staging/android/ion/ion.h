@@ -37,6 +37,17 @@ struct ion_buffer;
 #define ion_phys_addr_t unsigned long
 
 /**
+ * platform heap flags
+ */
+#define ION_PLAT_FLAG_KEEP (1 << 0)	/*
+					 * keep contents in heap.
+					 * The ion core does not clear the
+					 * contents even if heap is freed.
+					 * This is useful for the system has
+					 * other fast zero clear method.
+					 */
+
+/**
  * struct ion_platform_heap - defines a heap in the given platform
  * @type:	type of the heap from ion_heap_type enum
  * @id:		unique identifier for heap.  When allocating higher numbers
@@ -47,6 +58,7 @@ struct ion_buffer;
  * @size:	size of the heap in bytes if applicable
  * @align:	required alignment in physical memory if applicable
  * @priv:	private info passed from the board file
+ * @flags:	flags
  *
  * Provided by the board file.
  */
@@ -58,6 +70,7 @@ struct ion_platform_heap {
 	size_t size;
 	ion_phys_addr_t align;
 	void *priv;
+	unsigned long flags;
 };
 
 /**

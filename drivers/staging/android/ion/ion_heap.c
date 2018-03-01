@@ -140,8 +140,12 @@ static int ion_heap_sglist_zero(struct scatterlist *sgl, unsigned int nents,
 
 int ion_heap_buffer_zero(struct ion_buffer *buffer)
 {
+	struct ion_heap *heap = buffer->heap;
 	struct sg_table *table = buffer->sg_table;
 	pgprot_t pgprot;
+
+	if (heap->flags & ION_HEAP_FLAG_KEEP)
+		return 0;
 
 	if (buffer->flags & ION_FLAG_CACHED)
 		pgprot = PAGE_KERNEL;
