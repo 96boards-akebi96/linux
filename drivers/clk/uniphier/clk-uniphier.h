@@ -62,6 +62,43 @@ struct uniphier_clk_init_data {
 	struct clk *clk;
 };
 
+#define UNIPHIER_CLK_FACTOR(_name, _idx, _parent, _mult, _div)	\
+	{							\
+		.name = (_name),				\
+		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,		\
+		.output_index = (_idx),				\
+		.data.factor = {				\
+			.parent_name = (_parent),		\
+			.mult = (_mult),			\
+			.div = (_div),				\
+		},						\
+	}
+
+#define UNIPHIER_CLK_GATE(_name, _idx, _parent, _reg, _bit)	\
+	{							\
+		.name = (_name),				\
+		.type = UNIPHIER_CLK_TYPE_GATE,			\
+		.output_index = (_idx),				\
+		.data.gate = {					\
+			.parent_name = (_parent),		\
+			.reg = (_reg),				\
+			.bit_idx = (_bit),			\
+		},						\
+	}
+
+#define UNIPHIER_CLK_GATEX(_name, _idx, _parent, _reg, _bit)	\
+	{							\
+		.name = (_name),				\
+		.type = UNIPHIER_CLK_TYPE_GATE,			\
+		.output_index = (_idx),				\
+		.data.gate = {					\
+			.parent_name = (_parent),		\
+			.reg = (_reg),				\
+			.bit_idx = (_bit),			\
+			.flags = CLK_GATE_SET_TO_DISABLE,	\
+		},						\
+	}
+
 int uniphier_clk_init(struct device_node *np,
 		      struct uniphier_clk_init_data *idata);
 
