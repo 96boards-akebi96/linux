@@ -17,96 +17,15 @@
 #include "clk-uniphier.h"
 
 static struct uniphier_clk_init_data ph1_sld3_clk_idata[] __initdata = {
-	{
-		.name = "spll",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = -1,
-		.data.factor = {
-			.parent_name = "ref",
-			.mult = 65,
-			.div = 1,
-		},
-	},
-	{
-		.name = "upll",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = -1,
-		.data.factor = {
-			.parent_name = "ref",
-			.mult = 288000,
-			.div = 24576,
-		},
-	},
-	{
-		.name = "a2pll",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = -1,
-		.data.factor = {
-			.parent_name = "ref",
-			.mult = 24,
-			.div = 1,
-		},
-	},
-	{
-		.name = "uart",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = 3,
-		.data.factor = {
-			.parent_name = "a2pll",
-			.mult = 1,
-			.div = 16,
-		},
-	},
-	{
-		.name = "i2c",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = 4,
-		.data.factor = {
-			.parent_name = "spll",
-			.mult = 1,
-			.div = 16,
-		},
-	},
-	{
-		.name = "arm-scu",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = 7,
-		.data.factor = {
-			.parent_name = "spll",
-			.mult = 1,
-			.div = 32,
-		},
-	},
-	{
-		.name = "stdmac-clken",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = -1,
-		.data.gate = {
-			.parent_name = "ref",
-			.reg = 0x2104,
-			.bit_idx = 10,
-		},
-	},
-	{
-		.name = "stdmac",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = 10,
-		.data.gate = {
-			.parent_name = "stdmac-clken",
-			.reg = 0x2000,
-			.bit_idx = 10,
-		},
-	},
-	{
-		.name = "ehci",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = 18,
-		.data.factor = {
-			.parent_name = "upll",
-			.mult = 1,
-			.div = 12,
-		},
-	},
+	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 65, 1),
+	UNIPHIER_CLK_FACTOR("upll", -1, "ref", 288000, 24576),
+	UNIPHIER_CLK_FACTOR("a2pll", -1, "ref", 24, 1),
+	UNIPHIER_CLK_FACTOR("uart", 3, "a2pll", 1, 16),
+	UNIPHIER_CLK_FACTOR("i2c", 4, "spll", 1, 16),
+	UNIPHIER_CLK_FACTOR("arm-scu", 7, "spll", 1, 32),
+	UNIPHIER_CLK_GATE("stdmac-clken", -1, NULL, 0x2104, 10),
+	UNIPHIER_CLK_GATE("stdmac", 10, "stdmac-clken", 0x2000, 10),
+	UNIPHIER_CLK_FACTOR("ehci", 18, "upll", 1, 12),
 	{ /* sentinel */ }
 };
 

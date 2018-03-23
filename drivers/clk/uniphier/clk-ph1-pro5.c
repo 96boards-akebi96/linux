@@ -17,126 +17,22 @@
 #include "clk-uniphier.h"
 
 static struct uniphier_clk_init_data ph1_pro5_clk_idata[] __initdata = {
-	{
-		.name = "spll",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = -1,
-		.data.factor = {
-			.parent_name = "ref",
-			.mult = 120,
-			.div = 1,
-		},
-	},
-	{
-		.name = "dapll1",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = -1,
-		.data.factor = {
-			.parent_name = "ref",
-			.mult = 128,
-			.div = 125,
-		},
-	},
-	{
-		.name = "dapll2",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = -1,
-		.data.factor = {
-			.parent_name = "upll",
-			.mult = 144,
-			.div = 5,
-		},
-	},
-	{
-		.name = "uart",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = 3,
-		.data.factor = {
-			.parent_name = "dapll2",
-			.mult = 1,
-			.div = 8,
-		},
-	},
-	{
-		.name = "fi2c",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = 4,
-		.data.factor = {
-			.parent_name = "spll",
-			.mult = 1,
-			.div = 48,
-		},
-	},
-	{
-		.name = "arm-scu",
-		.type = UNIPHIER_CLK_TYPE_FIXED_FACTOR,
-		.output_index = 7,
-		.data.factor = {
-			.parent_name = "spll",
-			.mult = 1,
-			.div = 48,
-		},
-	},
-	{
-		.name = "stdmac-clken",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = -1,
-		.data.gate = {
-			.parent_name = NULL,
-			.reg = 0x2104,
-			.bit_idx = 10,
-		},
-	},
-	{
-		.name = "stdmac",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = 10,
-		.data.gate = {
-			.parent_name = "stdmac-clken",
-			.reg = 0x2000,
-			.bit_idx = 10,
-		},
-	},
-	{
-		.name = "xhci0-reset",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = -1,
-		.data.gate = {
-			.parent_name = NULL,
-			.reg = 0x2000,
-			.bit_idx = 17,
-		},
-	},
-	{
-		.name = "xhci1-reset",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = -1,
-		.data.gate = {
-			.parent_name = NULL,
-			.reg = 0x2004,
-			.bit_idx = 17,
-		},
-	},
-	{
-		.name = "xhci0-usb3phy-clken",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = 20,
-		.data.gate = {
-			.parent_name = "xhci0-reset",
-			.reg = 0x2104,
-			.bit_idx = 16,
-		},
-	},
-	{
-		.name = "xhci1-usb3phy-clken",
-		.type = UNIPHIER_CLK_TYPE_GATE,
-		.output_index = 21,
-		.data.gate = {
-			.parent_name = "xhci1-reset",
-			.reg = 0x2104,
-			.bit_idx = 17,
-		},
-	},
+	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 120, 1),
+	UNIPHIER_CLK_FACTOR("dapll1", -1, "ref", 128, 125),
+	UNIPHIER_CLK_FACTOR("dapll2", -1, "upll", 144, 5),
+	UNIPHIER_CLK_FACTOR("uart", 3, "dapll2", 1, 8),
+	UNIPHIER_CLK_FACTOR("fi2c", 4, "spll", 1, 48),
+	UNIPHIER_CLK_FACTOR("arm-scu", 7, "spll", 1, 48),
+	UNIPHIER_CLK_GATE("stdmac-clken", -1, "ref", 0x2104, 10),
+	UNIPHIER_CLK_GATE("stdmac", 10, "stdmac-clken", 0x2000, 10),
+	UNIPHIER_CLK_GATE("gio-clken", -1, NULL, 0x2104, 6),
+	UNIPHIER_CLK_GATE("gio", -1, "gio-clken", 0x2000, 6),
+	UNIPHIER_CLK_GATE("usb30-clken", 20, "gio", 0x2104, 16),
+	UNIPHIER_CLK_GATE("usb30", -1, "usb30-clken", 0x2000, 17),
+	UNIPHIER_CLK_GATE("usb31-clken", 21, "gio", 0x2104, 17),
+	UNIPHIER_CLK_GATE("usb31", -1, "usb31-clken", 0x2004, 17),
+	UNIPHIER_CLK_GATE("pcie-clken", -1, "gio", 0x2108, 2),
+	UNIPHIER_CLK_GATE("pcie", 27, "pcie-clken", 0x2008, 2),
 	{ /* sentinel */ }
 };
 
