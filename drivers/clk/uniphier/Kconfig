@@ -36,4 +36,8 @@ config CLK_UNIPHIER_PH1_LD20
 	bool "Clock driver for UniPhier PH1-LD20 SoC"
 	default y
 
+config CLK_UNIPHIER_PH1_PXS3
+	bool "Clock driver for UniPhier PH1-PXs3 SoC"
+	default y
+
 endif
