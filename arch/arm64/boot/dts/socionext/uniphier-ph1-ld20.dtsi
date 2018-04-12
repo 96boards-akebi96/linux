@@ -508,7 +508,7 @@
 			clocks = <&refclk>; /* fake */
 			bus-width = <8>;
 			mmc-hs200-1_8v;
-			cdns,phy-input-delay-legacy = <4>;
+			cdns,phy-input-delay-legacy = <9>;
 			cdns,phy-input-delay-mmc-highspeed = <2>;
 			cdns,phy-input-delay-mmc-ddr = <3>;
 			cdns,phy-dll-delay-sdclk = <21>;
