@@ -147,17 +147,6 @@
 					type = "passive";
 				};
 			};
-
-			cooling-maps {
-				map0 {
-					trip = <&cpu_alert>;
-					cooling-device = <&cpu0 (-1)  (-1)>;
-				};
-				map1 {
-					trip = <&cpu_alert>;
-					cooling-device = <&cpu2 (-1) (-1)>;
-				};
-			};
 		};
 	};
 
