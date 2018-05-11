@@ -719,6 +719,8 @@ static const struct uniphier_pinmux_function uniphier_ld20_functions[] = {
 	UNIPHIER_PINMUX_FUNCTION(usb3),
 	UNIPHIER_PINMUX_FUNCTION(spi0),
 	UNIPHIER_PINMUX_FUNCTION(spi1),
+	UNIPHIER_PINMUX_FUNCTION(spi2),
+	UNIPHIER_PINMUX_FUNCTION(spi3),
 };
 
 static int uniphier_ld20_get_gpio_muxval(unsigned int pin,
