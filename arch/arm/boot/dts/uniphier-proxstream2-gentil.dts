@@ -71,27 +71,6 @@
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
 	};
-
-	thermal-zones {
-		cpu_thermal {
-			polling-delay-passive = <250>;	/* 250ms */
-			polling-delay = <1000>;		/* 1000ms */
-			thermal-sensors = <&pvtctl>;
-
-			trips {
-				cpu_crit: cpu_crit {
-					temperature = <95000>;	/* 95C */
-					hysteresis = <2000>;
-					type = "critical";
-				};
-				cpu_alert: cpu_alert {
-					temperature = <85000>;	/* 85C */
-					hysteresis = <2000>;
-					type = "passive";
-				};
-			};
-		};
-	};
 };
 
 &ethsc {
