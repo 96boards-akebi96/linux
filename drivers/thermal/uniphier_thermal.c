@@ -115,7 +115,7 @@ static u32 maskreadl(void __iomem *base, u32 offset, u32 mask)
 	return (readl_relaxed(base + offset) & mask);
 }
 
-static void uniphier_tm_initialize_sensor(struct uniphier_tm_dev *tdev)
+static int uniphier_tm_initialize_sensor(struct uniphier_tm_dev *tdev)
 {
 	void __iomem *base = tdev->base;
 	u32 val;
@@ -150,6 +150,8 @@ static void uniphier_tm_initialize_sensor(struct uniphier_tm_dev *tdev)
 
 	/* set monitor mode */
 	maskwritel(base, PVTCTLSEL, PVTCTLSEL_MASK, PVTCTLSEL_MONITOR);
+
+	return 0;
 }
 
 static void uniphier_tm_set_alert(struct uniphier_tm_dev *tdev, u32 ch,
@@ -278,7 +280,7 @@ static int uniphier_tm_probe(struct platform_device *pdev)
 		return PTR_ERR(tdev->base);
 	}
 
-	uniphier_tm_initialize_sensor(tdev);
+	ret = uniphier_tm_initialize_sensor(tdev);
 	if (ret) {
 		dev_err(dev, "failed to initialize sensor\n");
 		return ret;
