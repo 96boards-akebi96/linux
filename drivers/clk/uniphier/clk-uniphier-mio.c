@@ -290,6 +290,17 @@ static struct uniphier_clk_init_data ph1_ld11_mio_clk_idata[] __initdata = {
 	{ /* sentinel */ }
 };
 
+static struct uniphier_clk_init_data ph1_ld20_mio_clk_idata[] __initdata = {
+	UNIPHIER_MIO_CLK_SD_FIXED,
+	UNIPHIER_MIO_CLK_SD(0, 0),
+	UNIPHIER_MIO_CLK_SD(1, 1),
+	/*
+	 * UNIPHIER_MIO_CLK_SD_HW_RESET(1, 3) is available for LD20, however,
+	 * ignore it until sd/mmc driver supports multiple clocks.
+	 */
+	{ /* sentinel */ }
+};
+
 static void __init ph1_sld3_mio_clk_init(struct device_node *np)
 {
 	uniphier_clk_init(np, ph1_sld3_mio_clk_idata);
@@ -321,8 +332,6 @@ CLK_OF_DECLARE(ph1_pro5_mio_clk, "socionext,ph1-pro5-mioctrl",
 	       ph1_pro5_mio_clk_init);
 CLK_OF_DECLARE(proxstream2_mio_clk, "socionext,proxstream2-mioctrl",
 	       ph1_pro5_mio_clk_init);
-CLK_OF_DECLARE(ph1_ld20_mio_clk, "socionext,ph1-ld20-mioctrl",
-	       ph1_pro5_mio_clk_init);
 
 static void __init ph1_ld11_mio_clk_init(struct device_node *np)
 {
@@ -330,3 +339,10 @@ static void __init ph1_ld11_mio_clk_init(struct device_node *np)
 }
 CLK_OF_DECLARE(ph1_ld11_mio_clk, "socionext,ph1-ld11-mioctrl",
 	       ph1_ld11_mio_clk_init);
+
+static void __init ph1_ld20_mio_clk_init(struct device_node *np)
+{
+	uniphier_clk_init(np, ph1_ld20_mio_clk_idata);
+}
+CLK_OF_DECLARE(ph1_ld20_mio_clk, "socionext,ph1-ld20-mioctrl",
+	       ph1_ld20_mio_clk_init);
