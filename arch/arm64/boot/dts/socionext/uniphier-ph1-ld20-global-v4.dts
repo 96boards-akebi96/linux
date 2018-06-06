@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
+//
+// Device Tree Source for UniPhier PH1-LD20 Global Board v4
+//
+// Copyright (C) 2017 Socionext Inc.
+
 #include "uniphier-ph1-ld20-global.dts"
 
 / {
