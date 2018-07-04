@@ -72,6 +72,7 @@ const struct reset_control_ops reset_simple_ops = {
 	.assert		= reset_simple_assert,
 	.deassert	= reset_simple_deassert,
 };
+EXPORT_SYMBOL_GPL(reset_simple_ops);
 
 /**
  * struct reset_simple_devdata - simple reset controller properties
