@@ -194,6 +194,22 @@
 		};
 	};
 
+	framebuffer {
+		compatible = "simple-framebuffer";
+		reg = <0 0xc0000000 0 0x02000000>;
+		width = <3840>;
+		height = <2160>;
+		stride = <15360>;
+		format = "a8r8g8b8";
+	};
+
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -627,6 +643,17 @@
 				dr_mode = "host";
 				tx-fifo-resize;
 			};
+		};
+
+		gpu@6e220000 {
+			compatible = "arm,mali-midgard";
+			reg = <0x6e220000 0x4000>;
+			interrupt-names = "JOB", "MMU", "GPU";
+			interrupts = <0 239 0>, /* JOB */
+				     <0 240 0>, /* MMU */
+				     <0 238 0>; /* GPU */
+			clock-names = "clk_mali";
+			clocks = <&refclk>; /* fake */
 		};
 	};
 };
