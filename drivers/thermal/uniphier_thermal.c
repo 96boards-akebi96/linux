@@ -21,12 +21,12 @@
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
-#include <linux/io.h>
+#include <linux/mfd/syscon.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
-#include <linux/pm.h>
+#include <linux/regmap.h>
 #include <linux/thermal.h>
 
 #include "thermal_core.h"
@@ -87,69 +87,67 @@
 
 /* SoC specific thermal sensor data */
 struct uniphier_tm_soc_data {
+	u32 map_base;
 	u32 block_base;
 	u32 tmod_setup_addr;
-	u32 tmod_calib[2];
 };
 
 struct uniphier_tm_dev {
+	struct regmap *regmap;
 	struct device *dev;
-	void __iomem  *base;
 	bool alert_en[ALERT_CH_NUM];
 	u32 alert_temp[ALERT_CH_NUM];
 	struct thermal_zone_device *tz_dev;
 	const struct uniphier_tm_soc_data *data;
 };
 
-static void maskwritel(void __iomem *base, u32 offset, u32 mask, u32 val)
-{
-	u32 tmp = readl_relaxed(base + offset);
-
-	tmp &= mask;
-	tmp |= val & mask;
-	writel_relaxed(val, base + offset);
-}
-
-static u32 maskreadl(void __iomem *base, u32 offset, u32 mask)
-{
-	return (readl_relaxed(base + offset) & mask);
-}
-
 static int uniphier_tm_initialize_sensor(struct uniphier_tm_dev *tdev)
 {
-	void __iomem *base = tdev->base;
+	struct regmap *map = tdev->regmap;
 	u32 val;
+	u32 tmod_calib[2];
+	int ret;
 
 	/* stop PVT */
-	maskwritel(base, tdev->data->block_base + PVTCTLEN,
-		    PVTCTLEN_EN, 0);
+	regmap_write_bits(map, tdev->data->block_base + PVTCTLEN,
+			  PVTCTLEN_EN, 0);
 
 	/*
 	 * Since SoC has a calibrated value that was set in advance,
 	 * TMODCOEF shows non-zero and PVT refers the value internally.
 	 *
 	 * If TMODCOEF shows zero, the boards don't have the calibrated
-	 * value, and the driver has to set default value from SoC data.
+	 * value, and the driver has to set default value from DT.
 	 */
-	val = readl(base + TMODCOEF);
-	if (!val)
-		maskwritel(base, tdev->data->tmod_setup_addr, ((u32)~0),
-			   TMODSETUP0_EN |
-			   TMODSETUP0_VAL(tdev->data->tmod_calib[0]) |
-			   TMODSETUP1_EN |
-			   TMODSETUP1_VAL(tdev->data->tmod_calib[1]));
+	ret = regmap_read(map, tdev->data->map_base + TMODCOEF, &val);
+	if (ret)
+		return ret;
+	if (!val) {
+		/* look for the default values in DT */
+		ret = of_property_read_u32_array(tdev->dev->of_node,
+						 "socionext,tmod-calibration",
+						 tmod_calib,
+						 ARRAY_SIZE(tmod_calib));
+		if (ret)
+			return ret;
+
+		regmap_write(map, tdev->data->tmod_setup_addr,
+			TMODSETUP0_EN | TMODSETUP0_VAL(tmod_calib[0]) |
+			TMODSETUP1_EN | TMODSETUP1_VAL(tmod_calib[1]));
+	}
 
 	/* select temperature mode */
-	maskwritel(base, tdev->data->block_base + PVTCTLMODE,
-		   PVTCTLMODE_MASK, PVTCTLMODE_TEMPMON);
+	regmap_write_bits(map, tdev->data->block_base + PVTCTLMODE,
+			  PVTCTLMODE_MASK, PVTCTLMODE_TEMPMON);
 
 	/* set monitoring period */
-	maskwritel(base, tdev->data->block_base + EMONREPEAT,
-		   EMONREPEAT_ENDLESS | EMONREPEAT_PERIOD,
-		   EMONREPEAT_ENDLESS | EMONREPEAT_PERIOD_1000000);
+	regmap_write_bits(map, tdev->data->block_base + EMONREPEAT,
+			  EMONREPEAT_ENDLESS | EMONREPEAT_PERIOD,
+			  EMONREPEAT_ENDLESS | EMONREPEAT_PERIOD_1000000);
 
 	/* set monitor mode */
-	maskwritel(base, PVTCTLSEL, PVTCTLSEL_MASK, PVTCTLSEL_MONITOR);
+	regmap_write_bits(map, tdev->data->map_base + PVTCTLSEL,
+			  PVTCTLSEL_MASK, PVTCTLSEL_MONITOR);
 
 	return 0;
 }
@@ -157,18 +155,18 @@ static int uniphier_tm_initialize_sensor(struct uniphier_tm_dev *tdev)
 static void uniphier_tm_set_alert(struct uniphier_tm_dev *tdev, u32 ch,
 				  u32 temp)
 {
-	void __iomem *base = tdev->base;
+	struct regmap *map = tdev->regmap;
 
 	/* set alert temperature */
-	maskwritel(base, SETALERT0 + (ch << 2),
-		   SETALERT_EN | SETALERT_TEMP_OVF,
-		   SETALERT_EN |
-		   SETALERT_TEMP_OVF_VALUE(temp / 1000));
+	regmap_write_bits(map, tdev->data->map_base + SETALERT0 + (ch << 2),
+			  SETALERT_EN | SETALERT_TEMP_OVF,
+			  SETALERT_EN |
+			  SETALERT_TEMP_OVF_VALUE(temp / 1000));
 }
 
 static void uniphier_tm_enable_sensor(struct uniphier_tm_dev *tdev)
 {
-	void __iomem *base = tdev->base;
+	struct regmap *map = tdev->regmap;
 	int i;
 	u32 bits = 0;
 
@@ -177,25 +175,27 @@ static void uniphier_tm_enable_sensor(struct uniphier_tm_dev *tdev)
 			bits |= PMALERTINTCTL_EN(i);
 
 	/* enable alert interrupt */
-	maskwritel(base, PMALERTINTCTL, PMALERTINTCTL_MASK, bits);
+	regmap_write_bits(map, tdev->data->map_base + PMALERTINTCTL,
+			  PMALERTINTCTL_MASK, bits);
 
 	/* start PVT */
-	maskwritel(base, tdev->data->block_base + PVTCTLEN,
-		    PVTCTLEN_EN, PVTCTLEN_EN);
+	regmap_write_bits(map, tdev->data->block_base + PVTCTLEN,
+			  PVTCTLEN_EN, PVTCTLEN_EN);
 
 	usleep_range(700, 1500);	/* The spec note says at least 700us */
 }
 
 static void uniphier_tm_disable_sensor(struct uniphier_tm_dev *tdev)
 {
-	void __iomem *base = tdev->base;
+	struct regmap *map = tdev->regmap;
 
 	/* disable alert interrupt */
-	maskwritel(base, PMALERTINTCTL, PMALERTINTCTL_MASK, 0);
+	regmap_write_bits(map, tdev->data->map_base + PMALERTINTCTL,
+			  PMALERTINTCTL_MASK, 0);
 
 	/* stop PVT */
-	maskwritel(base, tdev->data->block_base + PVTCTLEN,
-		   PVTCTLEN_EN, 0);
+	regmap_write_bits(map, tdev->data->block_base + PVTCTLEN,
+			  PVTCTLEN_EN, 0);
 
 	usleep_range(1000, 2000);	/* The spec note says at least 1ms */
 }
@@ -203,9 +203,13 @@ static void uniphier_tm_disable_sensor(struct uniphier_tm_dev *tdev)
 static int uniphier_tm_get_temp(void *data, int *out_temp)
 {
 	struct uniphier_tm_dev *tdev = data;
+	struct regmap *map = tdev->regmap;
+	int ret;
 	u32 temp;
 
-	temp = maskreadl(tdev->base, TMOD, GENMASK(TMOD_WIDTH - 1, 0));
+	ret = regmap_read(map, tdev->data->map_base + TMOD, &temp);
+	if (ret)
+		return ret;
 
 	/* MSB of the TMOD field is a sign bit */
 	*out_temp = sign_extend32(temp, TMOD_WIDTH - 1) * 1000;
@@ -228,7 +232,8 @@ static void uniphier_tm_irq_clear(struct uniphier_tm_dev *tdev)
 	}
 
 	/* clear alert interrupt */
-	maskwritel(tdev->base, PMALERTINTCTL, mask, bits);
+	regmap_write_bits(tdev->regmap,
+			  tdev->data->map_base + PMALERTINTCTL, mask, bits);
 }
 
 static irqreturn_t uniphier_tm_alarm_irq(int irq, void *_tdev)
@@ -245,17 +250,16 @@ static irqreturn_t uniphier_tm_alarm_irq_thread(int irq, void *_tdev)
 {
 	struct uniphier_tm_dev *tdev = _tdev;
 
-	thermal_zone_device_update(tdev->tz_dev);
+	thermal_zone_device_update(tdev->tz_dev, THERMAL_EVENT_UNSPECIFIED);
 
 	return IRQ_HANDLED;
 }
 
-static const struct of_device_id uniphier_tm_dt_ids[];
-
 static int uniphier_tm_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct resource *res;
+	struct regmap *regmap;
+	struct device_node *parent;
 	struct uniphier_tm_dev *tdev;
 	const struct thermal_trip *trips;
 	int i, ret, irq, ntrips, crit_temp = INT_MAX;
@@ -273,12 +277,16 @@ static int uniphier_tm_probe(struct platform_device *pdev)
 	if (irq < 0)
 		return irq;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	tdev->base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(tdev->base)) {
-		dev_err(dev, "failed to map resource\n");
-		return PTR_ERR(tdev->base);
+	/* get regmap from syscon node */
+	parent = of_get_parent(dev->of_node); /* parent should be syscon node */
+	regmap = syscon_node_to_regmap(parent);
+	of_node_put(parent);
+	if (IS_ERR(regmap)) {
+		dev_err(dev, "failed to get regmap (error %ld)\n",
+			PTR_ERR(regmap));
+		return PTR_ERR(regmap);
 	}
+	tdev->regmap = regmap;
 
 	ret = uniphier_tm_initialize_sensor(tdev);
 	if (ret) {
@@ -294,7 +302,7 @@ static int uniphier_tm_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, tdev);
 
-	tdev->tz_dev = thermal_zone_of_sensor_register(dev, 0, tdev,
+	tdev->tz_dev = devm_thermal_zone_of_sensor_register(dev, 0, tdev,
 						&uniphier_of_thermal_ops);
 	if (IS_ERR(tdev->tz_dev)) {
 		dev_err(dev, "failed to register sensor device\n");
@@ -306,8 +314,7 @@ static int uniphier_tm_probe(struct platform_device *pdev)
 	ntrips = of_thermal_get_ntrips(tdev->tz_dev);
 	if (ntrips > ALERT_CH_NUM) {
 		dev_err(dev, "thermal zone has too many trips\n");
-		ret = -E2BIG;
-		goto err_sensor;
+		return -E2BIG;
 	}
 
 	/* set alert temperatures */
@@ -322,30 +329,20 @@ static int uniphier_tm_probe(struct platform_device *pdev)
 	if (crit_temp > CRITICAL_TEMP_LIMIT) {
 		dev_err(dev, "critical trip is over limit(>%d), or not set\n",
 			CRITICAL_TEMP_LIMIT);
-		ret = -EINVAL;
-		goto err_sensor;
+		return -EINVAL;
 	}
 
 	uniphier_tm_enable_sensor(tdev);
 
-	dev_info(dev, "thermal driver (limit=%d C)\n", crit_temp / 1000);
-
 	return 0;
-
-err_sensor:
-	thermal_zone_of_sensor_unregister(dev, tdev->tz_dev);
-
-	return ret;
 }
 
 static int uniphier_tm_remove(struct platform_device *pdev)
 {
-	struct device *dev = &pdev->dev;
 	struct uniphier_tm_dev *tdev = platform_get_drvdata(pdev);
 
 	/* disable sensor */
 	uniphier_tm_disable_sensor(tdev);
-	thermal_zone_of_sensor_unregister(dev, tdev->tz_dev);
 
 	return 0;
 }
@@ -371,32 +368,31 @@ static int __maybe_unused uniphier_tm_resume(struct device *dev)
 		if (tdev->alert_en[i])
 			uniphier_tm_set_alert(tdev, i,
 					      tdev->alert_temp[i]);
-
 	uniphier_tm_enable_sensor(tdev);
 
 	return 0;
-}
+	}
 #endif
 
 static const struct uniphier_tm_soc_data uniphier_pxs2_tm_data = {
-	.block_base      = 0x0000,
-	.tmod_setup_addr = 0x0904,
-	.tmod_calib      = {0x4f86, 0xe844},
+	.map_base        = 0xe000,
+	.block_base      = 0xe000,
+	.tmod_setup_addr = 0xe904,
 };
 
 static const struct uniphier_tm_soc_data uniphier_ld20_tm_data = {
-	.block_base      = 0x0800,
-	.tmod_setup_addr = 0x0938,
-	.tmod_calib      = {0x4f22, 0xe8ee},
+	.map_base        = 0xe000,
+	.block_base      = 0xe800,
+	.tmod_setup_addr = 0xe938,
 };
 
 static const struct of_device_id uniphier_tm_dt_ids[] = {
 	{
-		.compatible = "socionext,proxstream2-thermal",
+		.compatible = "socionext,uniphier-pxs2-thermal",
 		.data       = &uniphier_pxs2_tm_data,
 	},
 	{
-		.compatible = "socionext,ph1-ld20-thermal",
+		.compatible = "socionext,uniphier-ld20-thermal",
 		.data       = &uniphier_ld20_tm_data,
 	},
 	{ /* sentinel */ }
@@ -404,7 +400,7 @@ static const struct of_device_id uniphier_tm_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, uniphier_tm_dt_ids);
 
 static SIMPLE_DEV_PM_OPS(uniphier_tm_pm_ops,
-			 uniphier_tm_suspend, uniphier_tm_resume);
+			  uniphier_tm_suspend, uniphier_tm_resume);
 
 static struct platform_driver uniphier_tm_driver = {
 	.probe = uniphier_tm_probe,
