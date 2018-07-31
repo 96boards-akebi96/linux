@@ -591,23 +591,23 @@
 		};
 
 		sysctrl: sysctrl@61840000 {
-			compatible = "socionext,ph1-ld20-sysctrl";
-			reg = <0x61840000 0x3000>;
+			compatible = "socionext,ph1-ld20-sysctrl",
+				     "simple-mfd", "syscon";
+			reg = <0x61840000 0x10000>;
 			#clock-cells = <1>;
 			clock-names = "ref";
 			clocks = <&refclk>;
-		};
 
-		watchdog@61843000 {
-			compatible = "socionext,uniphier-wdt";
-			reg = <0x61843000 0x1000>;
-		};
+			watchdog {
+				compatible = "socionext,uniphier-wdt";
+			};
 
-		pvtctl: pvtctl@6184e000 {
-			compatible = "socionext,ph1-ld20-thermal";
-			reg = <0x6184e000 0x1000>;
-			interrupts = <0 3 1>;
-			#thermal-sensor-cells = <0>;
+			pvtctl: pvtctl {
+				compatible = "socionext,uniphier-ld20-thermal";
+				interrupts = <0 3 4>;
+				#thermal-sensor-cells = <0>;
+				socionext,tmod-calibration = <0x0f22 0x68ee>;
+			};
 		};
 
 		usb: usb@65b00000 {

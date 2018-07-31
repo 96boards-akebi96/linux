@@ -477,16 +477,16 @@
 		};
 
 		sysctrl: sysctrl@61840000 {
-			compatible = "socionext,ph1-ld20-sysctrl";
-			reg = <0x61840000 0x4000>;
+			compatible = "socionext,ph1-ld20-sysctrl",
+				     "simple-mfd", "syscon";
+			reg = <0x61840000 0x10000>;
 			#clock-cells = <1>;
 			clock-names = "ref";
 			clocks = <&refclk>;
-		};
 
-		watchdog@61843000 {
-			compatible = "socionext,uniphier-wdt";
-			reg = <0x61843000 0x1000>;
+			watchdog@61843000 {
+				compatible = "socionext,uniphier-wdt";
+			};
 		};
 
 		nand: nand@68000000 {
