@@ -65,14 +65,3 @@
 &sd {
 	status = "okay";
 };
-
-&eth {
-	status = "okay";
-	phy-handle = <&ethphy>;
-};
-
-&mdio {
-	ethphy: ethphy@0 {
-		reg = <0>;
-	};
-};
