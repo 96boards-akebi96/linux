@@ -1,0 +1,12 @@
+#
+# PHY drivers for Socionext platforms.
+#
+
+config PHY_UNIPHIER_PCIE
+	tristate "Uniphier PHY driver for PCIe controller"
+	depends on (ARCH_UNIPHIER || COMPILE_TEST) && OF
+	default PCIE_UNIPHIER
+	select GENERIC_PHY
+	help
+	  Enable this to support PHY implemented in PCIe controller
+	  on UniPhier SoCs. This driver supports LD20 and PXs3 SoCs.
