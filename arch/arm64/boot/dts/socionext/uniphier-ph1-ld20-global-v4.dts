@@ -13,4 +13,15 @@
 	memory {
 		reg = <0 0x80000000 0 0x20000000>, <0 0xc0000000 0 0x40000000>;
 	};
+
+	audio_codec1: bd28623 {
+		compatible = "rohm,bd28623";
+		reset-gpios = <&port0x 0 GPIO_ACTIVE_LOW>;
+		mute-gpios = <&port0x 1 GPIO_ACTIVE_LOW>;
+		#sound-dai-cells = <0>;
+	};
+};
+
+&sound_codec_sp {
+	sound-dai = <&audio_codec1>;
 };

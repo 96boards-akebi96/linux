@@ -203,6 +203,17 @@
 		format = "a8r8g8b8";
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		memory@c0000000 {
+			reg = <0 0xc0000000 0 0x02000000>;
+			no-map;
+		};
+	};
+
 	firmware {
 		optee {
 			compatible = "linaro,optee-tz";
@@ -458,6 +469,21 @@
 			gpio-ranges = <&pinctrl 0 163 5>;
 		};
 
+		audio: audio@56000000 {
+			compatible = "socionext,uniphier-ld20-aio";
+			reg = <0x56000000 0x80000>;
+			interrupts = <0 144 4>, <0 48 1>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_aout>;
+			#sound-dai-cells = <1>;
+		};
+
+		evea: codec@57900000 {
+			compatible = "socionext,uniphier-evea";
+			reg = <0x57900000 0x1000>;
+			#sound-dai-cells = <1>;
+		};
+
 		i2c0: i2c@58780000 {
 			compatible = "socionext,uniphier-fi2c";
 			status = "disabled";
@@ -654,6 +680,135 @@
 				     <0 238 0>; /* GPU */
 			clock-names = "clk_mali";
 			clocks = <&refclk>; /* fake */
+		};
+
+		sound {
+			compatible = "simple-audio-card";
+			simple-audio-card,name = "UniPhier LD20";
+			simple-audio-card,widgets = "Headphone", "Headphone Jack";
+
+			simple-audio-card,dai-link@0 {
+				/* SIF in 1 */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 1>;
+				};
+				codec {
+					sound-dai = <&thru_in>;
+				};
+			};
+			simple-audio-card,dai-link@1 {
+				/* Line in/out 1 */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 2>;
+				};
+				codec {
+					sound-dai = <&evea 0>;
+				};
+			};
+			simple-audio-card,dai-link@2 {
+				/* SPDIF */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 5>;
+				};
+				codec {
+					sound-dai = <&spdif_out>;
+				};
+			};
+			simple-audio-card,dai-link@3 {
+				/* Speaker */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 3>;
+				};
+				sound_codec_sp: codec {
+					/* external codec */
+					sound-dai = <>;
+				};
+			};
+			simple-audio-card,dai-link@4 {
+				/* Headphone */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 4>;
+				};
+				codec {
+					sound-dai = <&evea 1>;
+				};
+			};
+			simple-audio-card,dai-link@5 {
+				/* SRC0 */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 6>;
+				};
+				codec {
+					sound-dai = <&thru_out>;
+				};
+			};
+			simple-audio-card,dai-link@6 {
+				/* SRC1 */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 7>;
+				};
+				codec {
+					sound-dai = <&thru_out>;
+				};
+			};
+			simple-audio-card,dai-link@7 {
+				/* HDMI in/out */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio 0>;
+				};
+				codec {
+					sound-dai = <&thru_in>;
+				};
+			};
+		};
+
+		sound-dsp {
+			compatible = "simple-audio-card";
+			simple-audio-card,name = "DSP LD20D";
+
+			simple-audio-card,dai-link@0 {
+				/* BT in */
+				format = "i2s";
+				cpu {
+					sound-dai = <&audio_dsp>;
+				};
+				codec {
+					sound-dai = <&thru_in_dsp>;
+				};
+			};
+		};
+
+		spdif_out: spdif-out {
+			compatible = "socionext,spdif-dit-mod";
+			#sound-dai-cells = <0>;
+		};
+
+		thru_in: thru-in {
+			compatible = "socionext,thru-in";
+			#sound-dai-cells = <0>;
+		};
+
+		thru_out: thru-out {
+			compatible = "socionext,thru-out";
+			#sound-dai-cells = <0>;
+		};
+
+		audio_dsp: audio-dsp {
+			compatible = "socionext,uniphier-ld20-dsp-loop";
+			#sound-dai-cells = <0>;
+		};
+
+		thru_in_dsp: thru-in-dsp {
+			compatible = "socionext,thru-in";
+			#sound-dai-cells = <0>;
 		};
 	};
 };
