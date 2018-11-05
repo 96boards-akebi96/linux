@@ -2771,30 +2771,6 @@ int usb_add_hcd(struct usb_hcd *hcd,
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_GENERIC_PHY) && !hcd->skip_phy_initialization) {
-		struct phy *phy = phy_get(hcd->self.sysdev, "usb");
-
-		if (IS_ERR(phy)) {
-			retval = PTR_ERR(phy);
-			if (retval == -EPROBE_DEFER)
-				goto err_phy;
-		} else {
-			retval = phy_init(phy);
-			if (retval) {
-				phy_put(phy);
-				goto err_phy;
-			}
-			retval = phy_power_on(phy);
-			if (retval) {
-				phy_exit(phy);
-				phy_put(phy);
-				goto err_phy;
-			}
-			hcd->phy = phy;
-			hcd->remove_phy = 1;
-		}
-	}
-
 	if (!hcd->skip_phy_initialization) {
 		hcd->phy_roothub = usb_phy_roothub_init(hcd->self.sysdev);
 		if (IS_ERR(hcd->phy_roothub)) {
@@ -2975,13 +2951,6 @@ err_create_buf:
 err_usb_phy_roothub_power_on:
 	usb_phy_roothub_exit(hcd->phy_roothub);
 err_phy_roothub_init:
-	if (IS_ENABLED(CONFIG_GENERIC_PHY) && hcd->remove_phy && hcd->phy) {
-		phy_power_off(hcd->phy);
-		phy_exit(hcd->phy);
-		phy_put(hcd->phy);
-		hcd->phy = NULL;
-	}
-err_phy:
 	if (hcd->remove_phy && hcd->usb_phy) {
 		usb_phy_shutdown(hcd->usb_phy);
 		usb_put_phy(hcd->usb_phy);
@@ -3062,12 +3031,6 @@ void usb_remove_hcd(struct usb_hcd *hcd)
 	usb_phy_roothub_power_off(hcd->phy_roothub);
 	usb_phy_roothub_exit(hcd->phy_roothub);
 
-	if (IS_ENABLED(CONFIG_GENERIC_PHY) && hcd->remove_phy && hcd->phy) {
-		phy_power_off(hcd->phy);
-		phy_exit(hcd->phy);
-		phy_put(hcd->phy);
-		hcd->phy = NULL;
-	}
 	if (hcd->remove_phy && hcd->usb_phy) {
 		usb_phy_shutdown(hcd->usb_phy);
 		usb_put_phy(hcd->usb_phy);
