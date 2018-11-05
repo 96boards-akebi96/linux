@@ -31,7 +31,7 @@ Required properties:
 	"wakeup_deb_p0": for USB wakeup debounce clock of port0
 	"wakeup_deb_p1": for USB wakeup debounce clock of port1
 
- - phys : a list of phandle + phy specifier pairs
+ - phys : see usb-hcd.txt in the current directory
 
 Optional properties:
  - mediatek,wakeup-src : 1: ip sleep wakeup mode; 2: line state wakeup
@@ -43,6 +43,9 @@ Optional properties:
  - pinctrl-names : a pinctrl state named "default" must be defined
  - pinctrl-0 : pin control group
 	See: Documentation/devicetree/bindings/pinctrl/pinctrl-bindings.txt
+
+additionally the properties from usb-hcd.txt (in the current directory) are
+supported.
 
 Example:
 usb30: usb@11270000 {
