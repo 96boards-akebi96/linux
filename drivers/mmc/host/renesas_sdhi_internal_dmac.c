@@ -171,10 +171,11 @@ renesas_sdhi_internal_dmac_start_dma(struct tmio_mmc_host *host,
 	renesas_sdhi_internal_dmac_dm_write(host, DM_DTRAN_ADDR,
 					    sg->dma_address);
 
+	host->dma_on = true;
+
 	return;
 
 force_pio:
-	host->force_pio = true;
 	renesas_sdhi_internal_dmac_enable_dma(host, false);
 }
 
