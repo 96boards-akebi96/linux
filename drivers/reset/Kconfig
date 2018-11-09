@@ -24,6 +24,16 @@ config RESET_SIMPLE
 
 	  Currently this driver supports Allwinner SoCs.
 
+config RESET_UNIPHIER_GLUE
+	tristate "Reset driver in glue layer for UniPhier SoCs"
+ 	depends on (ARCH_UNIPHIER || COMPILE_TEST) && OF
+ 	default ARCH_UNIPHIER
+ 	select RESET_SIMPLE
+ 	help
+	  Support for peripheral core reset included in its own glue layer
+	  on UniPhier SoCs. Say Y if you want to control reset signals
+	  provided by the glue layer.
+
 endif
 
 source "drivers/reset/sti/Kconfig"
