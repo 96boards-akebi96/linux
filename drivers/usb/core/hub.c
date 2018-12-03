@@ -36,10 +36,6 @@
 #define USB_VENDOR_GENESYS_LOGIC		0x05e3
 #define HUB_QUIRK_CHECK_PORT_AUTOSUSPEND	0x01
 
-#ifdef CONFIG_USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
-#define USB_PORT_FEAT_COMPLIANCE_RESET 40
-#endif
-
 /* Protect struct usb_device->state and ->children members
  * Note: Both are also protected by ->dev.sem, except that ->state can
  * change to USB_STATE_NOTATTACHED even when the semaphore isn't held. */
@@ -5146,23 +5142,6 @@ static void port_event(struct usb_hub *hub, int port1)
 			dev_err(&port_dev->dev, "over-current condition\n");
 #endif /* CONFIG_USB_UNIPHIER_WA_OC_DETECT */
 	}
-
-#ifdef CONFIG_USB_UNIPHIER_WA_COMPLIANCE_WARMRESET
-	/*
-	 * NOTE: This WA block is written inside hub_events()
-	 *       in the old WA code (Linux 3.x),
-	 *       NOW inside port_event() in the current code
-	 *       with replacing "i" by "port1".
-	 */
-	if( (portstatus & USB_PORT_STAT_LINK_STATE ) == USB_SS_PORT_LS_COMP_MOD ){
-		if( ((portstatus & USB_PORT_STAT_RESET) != 0) ){
-			set_port_feature(hub->hdev, port1, USB_PORT_FEAT_COMPLIANCE_RESET);
-		}else{
-			/*_ WarmReset _*/
-			hub_port_reset(hub, port1, NULL,120, true);
-		}
-	}
-#endif /* CONFIG_USB_UNIPHIER_WA_COMPLIANCE_WARMRESET */
 
 	if (portchange & USB_PORT_STAT_C_RESET) {
 		dev_dbg(&port_dev->dev, "reset change\n");
