@@ -59,14 +59,6 @@ config USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
 	---help---
 	  If unsure, say N.
 
-config USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_FIXCTE
-	bool "Uniphier USB workaround enabling xHCI SS/HS test mode (fixed CTE=1)"
-	depends on USB_UNIPHIER_WA
-	select USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE
-	default n
-	---help---
-	  If unsure, say N.
-
 config USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_DWC3
 	bool "Uniphier USB workaround enabling xHCI SS/HS test mode with DWC3 HstPrtCmpl"
 	depends on USB_UNIPHIER_WA && USB_DWC3

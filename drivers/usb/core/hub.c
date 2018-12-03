@@ -1799,21 +1799,8 @@ descriptor_error:
 	if (id->driver_info & HUB_QUIRK_CHECK_PORT_AUTOSUSPEND)
 		hub->quirk_check_port_auto_suspend = 1;
 
-#ifndef CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_FIXCTE
 	if (hub_configure(hub, endpoint) >= 0)
 		return 0;
-#else
-	if (hub_configure(hub, endpoint) >= 0) {
-		/* Hub is configured. If this hub is SS and Root Hub,
-		 * set Compliance Transition Enable bit for all ports.
-		 */
-		if (hub_is_superspeed(hdev) && hdev->parent == NULL) {
-			if (usb_ss_compliance_transition_enable_all(hdev) < 0)
-			        dev_warn(&hdev->dev, "SS Compliance Transition Enable failed.\n");
-		}
-		return 0;
-	}
-#endif /* CONFIG_USB_UNIPHIER_WA_XHCI_COMPLIANCE_TEST_MODE_FIXCTE */
 
 	hub_disconnect(intf);
 	return -ENODEV;
