@@ -1,0 +1,6 @@
+menuconfig UNIPHIER_DRIVERS
+	bool "Socionext UniPhier vendor-specific drivers"
+	depends on ARCH_UNIPHIER
+	default n
+	---help---
+	  Provide vendor-specific drivers for Socionext UniPhier series.
