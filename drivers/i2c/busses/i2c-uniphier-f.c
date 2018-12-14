@@ -343,12 +343,7 @@ static int uniphier_fi2c_master_xfer_one(struct i2c_adapter *adap,
 
 	time_left = wait_for_completion_timeout(&priv->comp, adap->timeout);
 	if (!time_left) {
-		dev_err(&adap->dev,
-			"transaction timeout. "
-			"(addr=0x%02x, R/W=%d, len=%d, stp=%d, irq_en=%04x, irq_st=%04x)\n",
-			msg->addr, is_read, msg->len, stop,
-			readl(priv->membase + UNIPHIER_FI2C_IE),
-			readl(priv->membase + UNIPHIER_FI2C_INT));
+		dev_err(&adap->dev, "transaction timeout.\n");
 		uniphier_fi2c_recover(priv);
 		return -ETIMEDOUT;
 	}
@@ -369,11 +364,7 @@ static int uniphier_fi2c_master_xfer_one(struct i2c_adapter *adap,
 
 		if (!time_left) {
 			dev_err(&adap->dev,
-				"stop condition was not completed. "
-				"(addr=0x%02x, R/W=%d, len=%d, stp=%d, irq_en=%04x, irq_st=%04x)\n",
-				msg->addr, is_read, msg->len, stop,
-				readl(priv->membase + UNIPHIER_FI2C_IE),
-				readl(priv->membase + UNIPHIER_FI2C_INT));
+				"stop condition was not completed.\n");
 			uniphier_fi2c_recover(priv);
 			return -EBUSY;
 		}
