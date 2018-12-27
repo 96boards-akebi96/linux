@@ -31,6 +31,11 @@
 		function = "aout1";
 	};
 
+	pinctrl_aout1x: aout1x {
+		groups = "aout1x";
+		function = "aout1x";
+	};
+
 	pinctrl_aout2: aout2 {
 		groups = "aout2";
 		function = "aout2";
@@ -39,6 +44,11 @@
 	pinctrl_aout3: aout3 {
 		groups = "aout3";
 		function = "aout3";
+	};
+
+	pinctrl_aout4: aout4 {
+		groups = "aout4";
+		function = "aout4";
 	};
 
 	pinctrl_aoutiec1: aoutiec1 {
