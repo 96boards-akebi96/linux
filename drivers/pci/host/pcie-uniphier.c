@@ -57,16 +57,18 @@
 #define PCL_RDLH_LINK_UP		BIT(1)
 #define PCL_XMLH_LINK_UP		BIT(0)
 
+#define PCI_NUM_INTX	4
+
 struct uniphier_pcie_priv {
 	void __iomem *base;
-	struct dw_pcie pci;
+	struct pcie_port pp;
 	struct clk *clk;
 	struct reset_control *rst;
 	struct phy *phy;
 	struct irq_domain *legacy_irq_domain;
 };
 
-#define to_uniphier_pcie(x)	dev_get_drvdata((x)->dev)
+#define to_uniphier_pcie(x)	container_of(x, struct uniphier_pcie_priv, pp)
 
 static void uniphier_pcie_ltssm_enable(struct uniphier_pcie_priv *priv,
 				       bool enable)
@@ -117,7 +119,7 @@ static int uniphier_pcie_wait_rc(struct uniphier_pcie_priv *priv)
 	ret = readl_poll_timeout(priv->base + PCL_PIPEMON, status,
 				 status & PCL_PCLK_ALIVE, 100000, 1000000);
 	if (ret) {
-		dev_err(priv->pci.dev,
+		dev_err(priv->pp.dev,
 			"Failed to initialize controller in RC mode\n");
 		return ret;
 	}
@@ -125,9 +127,9 @@ static int uniphier_pcie_wait_rc(struct uniphier_pcie_priv *priv)
 	return 0;
 }
 
-static int uniphier_pcie_link_up(struct dw_pcie *pci)
+static int uniphier_pcie_link_up(struct pcie_port *pp)
 {
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
 	u32 val, mask;
 
 	val = readl(priv->base + PCL_STATUS_LINK);
@@ -136,23 +138,38 @@ static int uniphier_pcie_link_up(struct dw_pcie *pci)
 	return (val & mask) == mask;
 }
 
-static int uniphier_pcie_establish_link(struct dw_pcie *pci)
+/* Parameters for the waiting for link up routine */
+#define LINK_WAIT_MAX_RETRIES           10
+#define LINK_WAIT_USLEEP_MIN            90000
+#define LINK_WAIT_USLEEP_MAX            100000
+static int uniphier_pcie_wait_for_link(struct pcie_port *pp)
 {
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
+	int retries;
 
-	if (dw_pcie_link_up(pci))
+	/* Check if the link is up or not */
+	for (retries = 0; retries < LINK_WAIT_MAX_RETRIES; retries++) {
+		if (dw_pcie_link_up(pp)) {
+			dev_info(pp->dev, "Link up\n");
+			return 0;
+		}
+		usleep_range(LINK_WAIT_USLEEP_MIN, LINK_WAIT_USLEEP_MAX);
+	}
+
+	dev_err(pp->dev, "Phy link never came up\n");
+
+	return -ETIMEDOUT;
+}
+
+static int uniphier_pcie_establish_link(struct pcie_port *pp)
+{
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
+
+	if (dw_pcie_link_up(pp))
 		return 0;
 
 	uniphier_pcie_ltssm_enable(priv, true);
 
-	return dw_pcie_wait_for_link(pci);
-}
-
-static void uniphier_pcie_stop_link(struct dw_pcie *pci)
-{
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
-
-	uniphier_pcie_ltssm_enable(priv, false);
+	return uniphier_pcie_wait_for_link(pp);
 }
 
 static void uniphier_pcie_irq_enable(struct uniphier_pcie_priv *priv)
@@ -170,8 +187,7 @@ static void uniphier_pcie_irq_disable(struct uniphier_pcie_priv *priv)
 static void uniphier_pcie_irq_ack(struct irq_data *d)
 {
 	struct pcie_port *pp = irq_data_get_irq_chip_data(d);
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
 	u32 val;
 
 	val = readl(priv->base + PCL_RCV_INTX);
@@ -183,8 +199,7 @@ static void uniphier_pcie_irq_ack(struct irq_data *d)
 static void uniphier_pcie_irq_mask(struct irq_data *d)
 {
 	struct pcie_port *pp = irq_data_get_irq_chip_data(d);
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
 	u32 val;
 
 	val = readl(priv->base + PCL_RCV_INTX);
@@ -196,8 +211,7 @@ static void uniphier_pcie_irq_mask(struct irq_data *d)
 static void uniphier_pcie_irq_unmask(struct irq_data *d)
 {
 	struct pcie_port *pp = irq_data_get_irq_chip_data(d);
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
 	u32 val;
 
 	val = readl(priv->base + PCL_RCV_INTX);
@@ -230,8 +244,7 @@ static const struct irq_domain_ops uniphier_intx_domain_ops = {
 static void uniphier_pcie_irq_handler(struct irq_desc *desc)
 {
 	struct pcie_port *pp = irq_desc_get_handler_data(desc);
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	unsigned long reg;
 	u32 val, bit, virq;
@@ -240,13 +253,13 @@ static void uniphier_pcie_irq_handler(struct irq_desc *desc)
 	val = readl(priv->base + PCL_RCV_INT);
 
 	if (val & PCL_CFG_BW_MGT_STATUS)
-		dev_dbg(pci->dev, "Link Bandwidth Management Event\n");
+		dev_dbg(pp->dev, "Link Bandwidth Management Event\n");
 	if (val & PCL_CFG_LINK_AUTO_BW_STATUS)
-		dev_dbg(pci->dev, "Link Autonomous Bandwidth Event\n");
+		dev_dbg(pp->dev, "Link Autonomous Bandwidth Event\n");
 	if (val & PCL_CFG_AER_RC_ERR_MSI_STATUS)
-		dev_dbg(pci->dev, "Root Error\n");
+		dev_dbg(pp->dev, "Root Error\n");
 	if (val & PCL_CFG_PME_MSI_STATUS)
-		dev_dbg(pci->dev, "PME Interrupt\n");
+		dev_dbg(pp->dev, "PME Interrupt\n");
 
 	writel(val, priv->base + PCL_RCV_INT);
 
@@ -266,27 +279,26 @@ static void uniphier_pcie_irq_handler(struct irq_desc *desc)
 
 static int uniphier_pcie_config_legacy_irq(struct pcie_port *pp)
 {
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
-	struct device_node *np = pci->dev->of_node;
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
+	struct device_node *np = pp->dev->of_node;
 	struct device_node *np_intc;
 
 	np_intc = of_get_child_by_name(np, "legacy-interrupt-controller");
 	if (!np_intc) {
-		dev_err(pci->dev, "Failed to get legacy-interrupt-controller node\n");
+		dev_err(pp->dev, "Failed to get legacy-interrupt-controller node\n");
 		return -EINVAL;
 	}
 
 	pp->irq = irq_of_parse_and_map(np_intc, 0);
 	if (!pp->irq) {
-		dev_err(pci->dev, "Failed to get an IRQ entry in legacy-interrupt-controller\n");
+		dev_err(pp->dev, "Failed to get an IRQ entry in legacy-interrupt-controller\n");
 		return -EINVAL;
 	}
 
 	priv->legacy_irq_domain = irq_domain_add_linear(np_intc, PCI_NUM_INTX,
 						&uniphier_intx_domain_ops, pp);
 	if (!priv->legacy_irq_domain) {
-		dev_err(pci->dev, "Failed to get INTx domain\n");
+		dev_err(pp->dev, "Failed to get INTx domain\n");
 		return -ENODEV;
 	}
 
@@ -296,38 +308,35 @@ static int uniphier_pcie_config_legacy_irq(struct pcie_port *pp)
 	return 0;
 }
 
-static int uniphier_pcie_host_init(struct pcie_port *pp)
+static void uniphier_pcie_host_init(struct pcie_port *pp)
 {
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pci);
+	struct uniphier_pcie_priv *priv = to_uniphier_pcie(pp);
 	int ret;
 
 	ret = uniphier_pcie_config_legacy_irq(pp);
 	if (ret)
-		return ret;
+		return;
 
 	uniphier_pcie_irq_enable(priv);
 
 	dw_pcie_setup_rc(pp);
-	ret = uniphier_pcie_establish_link(pci);
+	ret = uniphier_pcie_establish_link(pp);
 	if (ret)
-		return ret;
+		return;
 
 	if (IS_ENABLED(CONFIG_PCI_MSI))
 		dw_pcie_msi_init(pp);
-
-	return 0;
 }
 
-static const struct dw_pcie_host_ops uniphier_pcie_host_ops = {
+static struct pcie_host_ops uniphier_pcie_host_ops = {
 	.host_init = uniphier_pcie_host_init,
+	.link_up = uniphier_pcie_link_up,
 };
 
 static int uniphier_add_pcie_port(struct uniphier_pcie_priv *priv,
 				  struct platform_device *pdev)
 {
-	struct dw_pcie *pci = &priv->pci;
-	struct pcie_port *pp = &pci->pp;
+	struct pcie_port *pp = &priv->pp;
 	struct device *dev = &pdev->dev;
 	int ret;
 
@@ -356,9 +365,11 @@ static int uniphier_pcie_host_enable(struct uniphier_pcie_priv *priv)
 	if (ret)
 		return ret;
 
-	ret = reset_control_deassert(priv->rst);
-	if (ret)
-		goto out_clk_disable;
+	if (priv->rst) {
+		ret = reset_control_deassert(priv->rst);
+		if (ret)
+			goto out_clk_disable;
+	}
 
 	uniphier_pcie_init_rc(priv);
 
@@ -375,7 +386,8 @@ static int uniphier_pcie_host_enable(struct uniphier_pcie_priv *priv)
 out_phy_exit:
 	phy_exit(priv->phy);
 out_rst_assert:
-	reset_control_assert(priv->rst);
+	if (priv->rst)
+		reset_control_assert(priv->rst);
 out_clk_disable:
 	clk_disable_unprepare(priv->clk);
 
@@ -386,15 +398,10 @@ static void uniphier_pcie_host_disable(struct uniphier_pcie_priv *priv)
 {
 	uniphier_pcie_irq_disable(priv);
 	phy_exit(priv->phy);
-	reset_control_assert(priv->rst);
+	if (priv->rst)
+		reset_control_assert(priv->rst);
 	clk_disable_unprepare(priv->clk);
 }
-
-static const struct dw_pcie_ops dw_pcie_ops = {
-	.start_link = uniphier_pcie_establish_link,
-	.stop_link = uniphier_pcie_stop_link,
-	.link_up = uniphier_pcie_link_up,
-};
 
 static int uniphier_pcie_probe(struct platform_device *pdev)
 {
@@ -407,13 +414,12 @@ static int uniphier_pcie_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
-	priv->pci.dev = dev;
-	priv->pci.ops = &dw_pcie_ops;
+	priv->pp.dev = dev;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
-	priv->pci.dbi_base = devm_pci_remap_cfg_resource(dev, res);
-	if (IS_ERR(priv->pci.dbi_base))
-		return PTR_ERR(priv->pci.dbi_base);
+	priv->pp.dbi_base = devm_ioremap_resource(dev, res);
+	if (IS_ERR(priv->pp.dbi_base))
+		return PTR_ERR(priv->pp.dbi_base);
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "link");
 	priv->base = devm_ioremap_resource(dev, res);
@@ -424,16 +430,15 @@ static int uniphier_pcie_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->clk))
 		return PTR_ERR(priv->clk);
 
-	priv->rst = devm_reset_control_get_shared(dev, NULL);
+	priv->rst = devm_reset_control_get_optional(dev, NULL);
 	if (IS_ERR(priv->rst))
-		return PTR_ERR(priv->rst);
+		priv->rst = NULL;
 
 	priv->phy = devm_phy_optional_get(dev, "pcie-phy");
 	if (IS_ERR(priv->phy))
 		return PTR_ERR(priv->phy);
 
 	platform_set_drvdata(pdev, priv);
-
 	ret = uniphier_pcie_host_enable(priv);
 	if (ret)
 		return ret;
