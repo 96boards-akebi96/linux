@@ -390,6 +390,24 @@ static void ave_hw_read_version(struct net_device *ndev, char *buf, int len)
 	snprintf(buf, len, "v%u.%u", major, minor);
 }
 
+static int ave_ethtool_get_settings(struct net_device *ndev,
+				    struct ethtool_cmd *cmd)
+{
+	if (!ndev->phydev)
+		return -ENODEV;
+
+	return phy_ethtool_gset(ndev->phydev, cmd);
+}
+
+static int ave_ethtool_set_settings(struct net_device *ndev,
+				    struct ethtool_cmd *cmd)
+{
+	if (!ndev->phydev)
+		return -ENODEV;
+
+	return phy_ethtool_sset(ndev->phydev, cmd);
+}
+
 static void ave_ethtool_get_drvinfo(struct net_device *ndev,
 				    struct ethtool_drvinfo *info)
 {
@@ -398,6 +416,19 @@ static void ave_ethtool_get_drvinfo(struct net_device *ndev,
 	strlcpy(info->driver, dev->driver->name, sizeof(info->driver));
 	strlcpy(info->bus_info, dev_name(dev), sizeof(info->bus_info));
 	ave_hw_read_version(ndev, info->fw_version, sizeof(info->fw_version));
+}
+
+static int ave_ethtool_nway_reset(struct net_device *ndev)
+{
+	struct phy_device *phydev = ndev->phydev;
+
+	if (!phydev)
+		return -ENODEV;
+
+	if (!phydev->drv)
+		return -EIO;
+
+	return genphy_restart_aneg(phydev);
 }
 
 static u32 ave_ethtool_get_msglevel(struct net_device *ndev)
@@ -478,10 +509,10 @@ static int ave_ethtool_set_pauseparam(struct net_device *ndev,
 }
 
 static const struct ethtool_ops ave_ethtool_ops = {
-	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
-	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
+	.get_settings		= ave_ethtool_get_settings,
+	.set_settings		= ave_ethtool_set_settings,
 	.get_drvinfo		= ave_ethtool_get_drvinfo,
-	.nway_reset		= phy_ethtool_nway_reset,
+	.nway_reset		= ave_ethtool_nway_reset,
 	.get_link		= ethtool_op_get_link,
 	.get_msglevel		= ave_ethtool_get_msglevel,
 	.set_msglevel		= ave_ethtool_set_msglevel,
@@ -1173,8 +1204,9 @@ static int ave_init(struct net_device *ndev)
 	struct ave_private *priv = netdev_priv(ndev);
 	struct device *dev = ndev->dev.parent;
 	struct device_node *np = dev->of_node;
-	struct device_node *mdio_np;
+	struct device_node *mdio_np, *phy_np;
 	struct phy_device *phydev;
+	phy_interface_t iface;
 	int nc, nr, ret;
 
 	/* enable clk because of hw access until ndo_open */
@@ -1187,10 +1219,12 @@ static int ave_init(struct net_device *ndev)
 	}
 
 	for (nr = 0; nr < priv->nrsts; nr++) {
-		ret = reset_control_deassert(priv->rst[nr]);
-		if (ret) {
-			dev_err(dev, "can't deassert reset\n");
-			goto out_reset_assert;
+		if (priv->rst[nr]) {
+			ret = reset_control_deassert(priv->rst[nr]);
+			if (ret) {
+				dev_err(dev, "can't deassert reset\n");
+				goto out_reset_assert;
+			}
 		}
 	}
 
@@ -1214,7 +1248,19 @@ static int ave_init(struct net_device *ndev)
 		goto out_reset_assert;
 	}
 
-	phydev = of_phy_get_and_connect(ndev, np, ave_phy_adjust_link);
+	iface = of_get_phy_mode(np);
+	if (iface < 0) {
+		ret = -ENODEV;
+		goto out_mdio_unregister;
+	}
+	phy_np = of_parse_phandle(np, "phy-handle", 0);
+	if (!phy_np) {
+		ret = -ENODEV;
+		of_node_put(phy_np);
+		goto out_mdio_unregister;
+	}
+	phydev = of_phy_connect(ndev, phy_np, ave_phy_adjust_link, 0, iface);
+	of_node_put(phy_np);
 	if (!phydev) {
 		dev_err(dev, "could not attach to PHY\n");
 		ret = -ENODEV;
@@ -1236,7 +1282,10 @@ static int ave_init(struct net_device *ndev)
 	}
 	phydev->supported |= SUPPORTED_Pause | SUPPORTED_Asym_Pause;
 
-	phy_attached_info(phydev);
+#define ATTACHED_FMT "attached PHY driver [%s] (mii_bus:phy_addr=%s, irq=%d)"
+	dev_info(&phydev->dev, ATTACHED_FMT "\n",
+		 phydev->drv->name, dev_name(&phydev->dev),
+		 phydev->irq);
 
 	return 0;
 
@@ -1244,7 +1293,8 @@ out_mdio_unregister:
 	mdiobus_unregister(priv->mdio);
 out_reset_assert:
 	while (--nr >= 0)
-		reset_control_assert(priv->rst[nr]);
+		if (priv->rst[nr])
+			reset_control_assert(priv->rst[nr]);
 out_clk_disable:
 	while (--nc >= 0)
 		clk_disable_unprepare(priv->clk[nc]);
@@ -1262,7 +1312,8 @@ static void ave_uninit(struct net_device *ndev)
 
 	/* disable clk because of hw access after ndo_stop */
 	for (i = 0; i < priv->nrsts; i++)
-		reset_control_assert(priv->rst[i]);
+		if (priv->rst[i])
+			reset_control_assert(priv->rst[i]);
 	for (i = 0; i < priv->nclks; i++)
 		clk_disable_unprepare(priv->clk[i]);
 }
@@ -1506,8 +1557,9 @@ static void ave_set_rx_mode(struct net_device *ndev)
 	}
 }
 
-static void ave_get_stats64(struct net_device *ndev,
-			    struct rtnl_link_stats64 *stats)
+static
+struct rtnl_link_stats64 *ave_get_stats64(struct net_device *ndev,
+					  struct rtnl_link_stats64 *stats)
 {
 	struct ave_private *priv = netdev_priv(ndev);
 	unsigned int start;
@@ -1530,6 +1582,8 @@ static void ave_get_stats64(struct net_device *ndev,
 	stats->tx_dropped     = priv->stats_tx.dropped;
 	stats->rx_fifo_errors = priv->stats_rx.fifo_errors;
 	stats->collisions     = priv->stats_tx.collisions;
+
+	return stats;
 }
 
 static int ave_set_mac_address(struct net_device *ndev, void *p)
@@ -1609,7 +1663,7 @@ static int ave_probe(struct platform_device *pdev)
 	ndev->features    |= (NETIF_F_IP_CSUM | NETIF_F_RXCSUM);
 	ndev->hw_features |= (NETIF_F_IP_CSUM | NETIF_F_RXCSUM);
 
-	ndev->max_mtu = AVE_MAX_ETHFRAME - (ETH_HLEN + ETH_FCS_LEN);
+/*	ndev->max_mtu = AVE_MAX_ETHFRAME - (ETH_HLEN + ETH_FCS_LEN); */
 
 	mac_addr = of_get_mac_address(np);
 	if (mac_addr)
@@ -1667,11 +1721,9 @@ static int ave_probe(struct platform_device *pdev)
 		name = priv->data->reset_names[i];
 		if (!name)
 			break;
-		priv->rst[i] = devm_reset_control_get_shared(dev, name);
-		if (IS_ERR(priv->rst[i])) {
-			ret = PTR_ERR(priv->rst[i]);
-			goto out_free_netdev;
-		}
+		priv->rst[i] = devm_reset_control_get_optional(dev, name);
+		if (IS_ERR(priv->rst[i]))
+			priv->rst[i] = NULL;
 		priv->nrsts++;
 	}
 
@@ -1711,8 +1763,8 @@ static int ave_probe(struct platform_device *pdev)
 	/* Register as a NAPI supported driver */
 	netif_napi_add(ndev, &priv->napi_rx, ave_napi_poll_rx,
 		       NAPI_POLL_WEIGHT);
-	netif_tx_napi_add(ndev, &priv->napi_tx, ave_napi_poll_tx,
-			  NAPI_POLL_WEIGHT);
+	netif_napi_add(ndev, &priv->napi_tx, ave_napi_poll_tx,
+		       NAPI_POLL_WEIGHT);
 
 	platform_set_drvdata(pdev, ndev);
 
