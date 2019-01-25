@@ -104,6 +104,27 @@
 			     <1 10 4>;
 	};
 
+	thermal-zones {
+		cpu-thermal {
+			polling-delay-passive = <250>;	/* 250ms */
+			polling-delay = <1000>;		/* 1000ms */
+			thermal-sensors = <&pvtctl>;
+
+			trips {
+				cpu_crit: cpu-crit {
+					temperature = <120000>;	/* 120C */
+					hysteresis = <2000>;
+					type = "critical";
+				};
+				cpu_alert: cpu-alert {
+					temperature = <110000>;	/* 110C */
+					hysteresis = <2000>;
+					type = "passive";
+				};
+			};
+		};
+	};
+
 	soc@0 {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -306,15 +327,33 @@
 			interrupts = <1 9 4>;
 		};
 
+		sysctrl: sysctrl@61840000 {
+			compatible = "socionext,uniphier-pxs3-sysctrl",
+				     "simple-mfd", "syscon";
+			reg = <0x61840000 0x10000>;
+			#clock-cells = <1>;
+			clock-names = "ref";
+			clocks = <&refclk>;
+
+			watchdog {
+				compatible = "socionext,uniphier-wdt";
+			};
+
+			pvtctl: pvtctl {
+				compatible = "socionext,uniphier-pxs3-thermal";
+				interrupts = <0 3 4>;
+				#thermal-sensor-cells = <0>;
+				socionext,tmod-calibration = <0x0f22 0x68ee>;
+			};
+		};
+
 		usb3_0: usb3_0@65b00000 {
 			compatible = "socionext,proxstream3-dwc3";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_usb0>, <&pinctrl_usb2>;
 			reg = <0x65b00000 0x1000>;
-			/* uncomment clocks and clock-names
-			   after the sysctrl node is added */
-			/* clocks = <&sysctrl 20>,<&sysctrl 22>,<&sysctrl 23>; */
-			/* clock-names = "u3clk0", "u3clk1", "u2clk0"; */
+			clocks = <&sysctrl 20>, <&sysctrl 22>, <&sysctrl 23>;
+			clock-names = "u3clk0", "u3clk1", "u2clk0";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
@@ -332,10 +371,8 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_usb1>, <&pinctrl_usb3>;
 			reg = <0x65d00000 0x1000>;
-			/* uncomment clocks and clock-names
-			   after the sysctrl node is added */
-			/* clocks = <&sysctrl 21>,<&sysctrl 24>; */
-			/* clock-names = "u3clk0", "u2clk0"; */
+			clocks = <&sysctrl 21>, <&sysctrl 24>;
+			clock-names = "u3clk0", "u2clk0";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
