@@ -117,9 +117,11 @@ static int uniphier_pciephy_init(struct phy *phy)
 	if (ret)
 		return ret;
 
-	ret = reset_control_deassert(priv->rst);
-	if (ret)
-		goto out_clk_disable;
+	if (priv->rst) {
+		ret = reset_control_deassert(priv->rst);
+		if (ret)
+			goto out_clk_disable;
+	}
 
 	uniphier_pciephy_set_param(priv, PCL_PHY_R00,
 				   RX_EQ_ADJ_EN, RX_EQ_ADJ_EN);
@@ -145,7 +147,8 @@ static int uniphier_pciephy_exit(struct phy *phy)
 	struct uniphier_pciephy_priv *priv = phy_get_drvdata(phy);
 
 	uniphier_pciephy_assert(priv);
-	reset_control_assert(priv->rst);
+	if (priv->rst)
+		reset_control_assert(priv->rst);
 	clk_disable_unprepare(priv->clk);
 
 	return 0;
@@ -185,9 +188,9 @@ static int uniphier_pciephy_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->clk))
 		return PTR_ERR(priv->clk);
 
-	priv->rst = devm_reset_control_get_shared(dev, NULL);
+	priv->rst = devm_reset_control_get_optional(dev, NULL);
 	if (IS_ERR(priv->rst))
-		return PTR_ERR(priv->rst);
+		priv->rst = NULL;
 
 	phy = devm_phy_create(dev, dev->of_node, &uniphier_pciephy_ops);
 	if (IS_ERR(phy))
