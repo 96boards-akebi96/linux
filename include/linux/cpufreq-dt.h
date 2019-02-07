@@ -17,6 +17,8 @@ struct cpufreq_dt_platform_data {
 	 * clock.
 	 */
 	bool independent_clocks;
+
+	bool have_governor_per_policy;
 };
 
 #endif /* __CPUFREQ_DT_H__ */

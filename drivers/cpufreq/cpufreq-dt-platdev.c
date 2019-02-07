@@ -7,12 +7,12 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/cpufreq.h>
+#include <linux/cpufreq-dt.h>
 #include <linux/err.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
-
-#include "cpufreq-dt.h"
 
 /*
  * Machines for which the cpufreq device is *always* created, mostly used for
