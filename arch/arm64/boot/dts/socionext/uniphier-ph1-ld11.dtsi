@@ -32,6 +32,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0 0x000>;
+			clocks = <&sysctrl 33>;
 			enable-method = "psci";
 			operating-points-v2 = <&cluster0_opp>;
 		};
@@ -40,6 +41,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0 0x001>;
+			clocks = <&sysctrl 33>;
 			enable-method = "psci";
 			operating-points-v2 = <&cluster0_opp>;
 		};
