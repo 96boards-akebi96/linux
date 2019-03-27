@@ -22,6 +22,7 @@ static struct uniphier_clk_init_data ph1_sld8_clk_idata[] __initdata = {
 	UNIPHIER_CLK_FACTOR("vpll27a", -1, "ref", 270, 25),	/* 270 MHz */
 	UNIPHIER_CLK_FACTOR("uart", 3, "spll", 1, 20),
 	UNIPHIER_CLK_FACTOR("i2c", 4, "spll", 1, 16),
+	UNIPHIER_CLK_FACTOR("spi", -1, "spll", 1, 32),
 	UNIPHIER_CLK_FACTOR("arm-scu", 7, "spll", 1, 32),
 	UNIPHIER_CLK_GATE("stdmac-clken", -1, NULL, 0x2104, 10),
 	UNIPHIER_CLK_GATE("stdmac", 10, "stdmac-clken", 0x2000, 10),

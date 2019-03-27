@@ -22,6 +22,7 @@ static struct uniphier_clk_init_data ph1_pxs3_clk_idata[] __initdata = {
 	UNIPHIER_CLK_FACTOR("s2pll", -1, "ref", 88, 1),         /* IPP: 2400 MHz */
 /*	UNIPHIER_CLK_FACTOR("uart", 3, "spll", 1, 34),*/
 /*	UNIPHIER_CLK_FACTOR("fi2c", 4, "spll", 1, 40),*/
+	UNIPHIER_CLK_FACTOR("spi", -1, "spll", 1, 40),
 	UNIPHIER_CLK_GATE("ether0-clken", -1, NULL, 0x210c, 9),
 	UNIPHIER_CLK_GATE("ether0", 8, "ether0-clken", 0x200c, 9),
 	UNIPHIER_CLK_GATE("ether1-clken", -1, NULL, 0x210c, 10),

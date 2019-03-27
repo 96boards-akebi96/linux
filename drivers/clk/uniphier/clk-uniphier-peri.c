@@ -105,6 +105,50 @@
 		},						\
 	}
 
+#define UNIPHIER_PERI_CLK_SCSSI(index)				\
+	{							\
+		.name = "scssi-clken",				\
+		.type = UNIPHIER_CLK_TYPE_GATE,			\
+		.output_index = -1,				\
+		.data.gate = {					\
+			.parent_name = "spi",			\
+			.reg = 0x20,				\
+			.bit_idx = 17,				\
+		},						\
+	},							\
+	{							\
+		.name = "scssi",				\
+		.type = UNIPHIER_CLK_TYPE_GATE,			\
+		.output_index = index,				\
+		.data.gate = {					\
+			.parent_name = "scssi-clken",		\
+			.reg = 0x110,				\
+			.bit_idx = 17,				\
+		},						\
+	}
+
+#define UNIPHIER_PERI_CLK_MCSSI(index)				\
+	{							\
+		.name = "mcssi-clken",				\
+		.type = UNIPHIER_CLK_TYPE_GATE,			\
+		.output_index = -1,				\
+		.data.gate = {					\
+			.parent_name = "spi",			\
+			.reg = 0x24,				\
+			.bit_idx = 14,				\
+		},						\
+	},							\
+	{							\
+		.name = "mcssi",				\
+		.type = UNIPHIER_CLK_TYPE_GATE,			\
+		.output_index = index,				\
+		.data.gate = {					\
+			.parent_name = "mcssi-clken",		\
+			.reg = 0x114,				\
+			.bit_idx = 14,				\
+		},						\
+	}
+
 static struct uniphier_clk_init_data ph1_ld4_peri_clk_idata[] __initdata = {
 	UNIPHIER_PERI_CLK_UART(0, 0),
 	UNIPHIER_PERI_CLK_UART(1, 1),
@@ -116,6 +160,7 @@ static struct uniphier_clk_init_data ph1_ld4_peri_clk_idata[] __initdata = {
 	UNIPHIER_PERI_CLK_I2C(2, 6),
 	UNIPHIER_PERI_CLK_I2C(3, 7),
 	UNIPHIER_PERI_CLK_I2C(4, 8),
+	UNIPHIER_PERI_CLK_SCSSI(11),
 	{ /* sentinel */ }
 };
 
@@ -131,6 +176,8 @@ static struct uniphier_clk_init_data ph1_pro4_peri_clk_idata[] __initdata = {
 	/* no I2C ch4 */
 	UNIPHIER_PERI_CLK_FI2C(5, 9),
 	UNIPHIER_PERI_CLK_FI2C(6, 10),
+	UNIPHIER_PERI_CLK_SCSSI(11),
+	UNIPHIER_PERI_CLK_MCSSI(12),
 	{ /* sentinel */ }
 };
 
@@ -146,6 +193,8 @@ static struct uniphier_clk_init_data ph1_pro5_peri_clk_idata[] __initdata = {
 	UNIPHIER_PERI_CLK_FI2C(4, 8),
 	UNIPHIER_PERI_CLK_FI2C(5, 9),
 	UNIPHIER_PERI_CLK_FI2C(6, 10),
+	UNIPHIER_PERI_CLK_SCSSI(11),
+	UNIPHIER_PERI_CLK_MCSSI(12),
 	{ /* sentinel */ }
 };
 

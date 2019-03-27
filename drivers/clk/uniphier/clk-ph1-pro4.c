@@ -24,6 +24,7 @@ static struct uniphier_clk_init_data ph1_pro4_clk_idata[] __initdata = {
 	UNIPHIER_CLK_FACTOR("gpll", -1, "ref", 10, 1),		/* 250 MHz */
 	UNIPHIER_CLK_FACTOR("uart", 3, "a2pll", 1, 8),
 	UNIPHIER_CLK_FACTOR("fi2c", 4, "spll", 1, 32),
+	UNIPHIER_CLK_FACTOR("spi", 1, "spll", 1, 32),
 	UNIPHIER_CLK_FACTOR("arm-scu", 7, "spll", 1, 32),
 	UNIPHIER_CLK_GATE("gio-clken", -1, NULL, 0x2104, 6),
 	UNIPHIER_CLK_GATE("gio", -1, "gio-clken", 0x2000, 6),
