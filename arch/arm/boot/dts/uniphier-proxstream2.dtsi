@@ -82,16 +82,20 @@
 		compatible = "socionext,uniphier-scssi";
 		status = "disabled";
 		reg = <0x54006000 0x100>;
+		interrupts = <0 39 4>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_spi0>;
+		clocks = <&peri 11>;
 	};
 
 	spi1: spi@54006100 {
 		compatible = "socionext,uniphier-scssi";
 		status = "disabled";
 		reg = <0x54006100 0x100>;
+		interrupts = <0 216 4>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_spi1>;
+		clocks = <&peri 11>;
 	};
 
 	port0x: gpio@55000008 {
