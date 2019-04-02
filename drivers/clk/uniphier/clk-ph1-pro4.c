@@ -17,9 +17,11 @@
 #include "clk-uniphier.h"
 
 static struct uniphier_clk_init_data ph1_pro4_clk_idata[] __initdata = {
-	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 64, 1),
-	UNIPHIER_CLK_FACTOR("upll", -1, "ref", 288, 25),
-	UNIPHIER_CLK_FACTOR("a2pll", -1, "upll", 256, 125),
+	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 64, 1),		/* 1600 MHz */
+	UNIPHIER_CLK_FACTOR("upll", -1, "ref", 288, 25),	/* 288 MHz */
+	UNIPHIER_CLK_FACTOR("a2pll", -1, "upll", 256, 125),	/* 589.824 MHz */
+	UNIPHIER_CLK_FACTOR("vpll27a", -1, "ref", 270, 25),	/* 270 MHz */
+	UNIPHIER_CLK_FACTOR("gpll", -1, "ref", 10, 1),		/* 250 MHz */
 	UNIPHIER_CLK_FACTOR("uart", 3, "a2pll", 1, 8),
 	UNIPHIER_CLK_FACTOR("fi2c", 4, "spll", 1, 32),
 	UNIPHIER_CLK_FACTOR("arm-scu", 7, "spll", 1, 32),

@@ -17,8 +17,9 @@
 #include "clk-uniphier.h"
 
 static struct uniphier_clk_init_data ph1_sld8_clk_idata[] __initdata = {
-	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 64, 1),
-	UNIPHIER_CLK_FACTOR("upll", -1, "ref", 288, 25),
+	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 64, 1),		/* 1600 MHz */
+	UNIPHIER_CLK_FACTOR("upll", -1, "ref", 288, 25),	/* 288 MHz */
+	UNIPHIER_CLK_FACTOR("vpll27a", -1, "ref", 270, 25),	/* 270 MHz */
 	UNIPHIER_CLK_FACTOR("uart", 3, "spll", 1, 20),
 	UNIPHIER_CLK_FACTOR("i2c", 4, "spll", 1, 16),
 	UNIPHIER_CLK_FACTOR("arm-scu", 7, "spll", 1, 32),
