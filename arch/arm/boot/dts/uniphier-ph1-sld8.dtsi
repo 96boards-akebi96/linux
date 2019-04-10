@@ -43,149 +43,22 @@
 		pinctrl-0 = <&pinctrl_spi0>;
 	};
 
-	port0x: gpio@55000008 {
+	gpio: gpio@55000000 {
 		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000008 0x8>;
+		reg = <0x55000000 0x200>;
+		interrupt-parent = <&aidet>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
 		gpio-controller;
 		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 0 8>;
-	};
-
-	port1x: gpio@55000010 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000010 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 8 8>;
-	};
-
-	port2x: gpio@55000018 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000018 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 32 8>;
-	};
-
-	port3x: gpio@55000020 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000020 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 59 8>;
-	};
-
-	port4: gpio@55000028 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000028 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 95 7>,
-			      <&pinctrl 7 57 1>;
-	};
-
-	port5x: gpio@55000030 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000030 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 70 8>;
-	};
-
-	port6x: gpio@55000038 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000038 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 81 1>,
-			      <&pinctrl 1 83 4>,
-			      <&pinctrl 5 89 3>;
-	};
-
-	port7x: gpio@55000040 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000040 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 118 5>,
-			      <&pinctrl 5 53 3>;
-	};
-
-	port8x: gpio@55000048 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000048 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 41 4>,
-			      <&pinctrl 4 79 2>,
-			      <&pinctrl 6 18 2>;
-	};
-
-	port9x: gpio@55000050 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000050 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 110 6>,
-			      <&pinctrl 6 16 2>;
-	};
-
-	port10x: gpio@55000058 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000058 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 40 1>,
-			      <&pinctrl 1 67 3>,
-			      <&pinctrl 4 78 1>,
-			      <&pinctrl 5 92 3>;
-	};
-
-	port11x: gpio@55000060 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000060 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 48 2>,
-			      <&pinctrl 2 46 1>,
-			      <&pinctrl 3 45 1>,
-			      <&pinctrl 4 123 4>;
-	};
-
-	port12x: gpio@55000068 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000068 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 47 1>,
-			      <&pinctrl 1 127 1>,
-			      <&pinctrl 2 20 1>,
-			      <&pinctrl 3 56 1>,
-			      <&pinctrl 4 22 1>;
-	};
-
-	port13x: gpio@55000070 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000070 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 116 2>;
-	};
-
-	port14x: gpio@55000078 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000078 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 0 102 8>;
-	};
-
-	port16x: gpio@55000088 {
-		compatible = "socionext,uniphier-gpio";
-		reg = <0x55000088 0x8>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-ranges = <&pinctrl 6 23 1>;
+		gpio-ranges = <&pinctrl 0 0 0>,
+			      <&pinctrl 104 0 0>,
+			      <&pinctrl 112 0 0>;
+		gpio-ranges-group-names = "gpio_range0",
+					  "gpio_range1",
+					  "gpio_range2";
+		ngpios = <136>;
+		socionext,interrupt-ranges = <0 48 13>, <14 62 2>;
 	};
 
 	i2c0: i2c@58400000 {
