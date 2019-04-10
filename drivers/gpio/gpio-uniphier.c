@@ -36,6 +36,11 @@ struct uniphier_gpio_priv {
 	u32 saved_vals[0];
 };
 
+static inline struct uniphier_gpio_priv *to_uniphier_gpio(struct gpio_chip *chip)
+{
+	return container_of(chip, struct uniphier_gpio_priv, chip);
+}
+
 static unsigned int uniphier_gpio_bank_to_reg(unsigned int bank)
 {
 	unsigned int reg;
@@ -76,7 +81,7 @@ static void uniphier_gpio_reg_update(struct uniphier_gpio_priv *priv,
 static void uniphier_gpio_bank_write(struct gpio_chip *chip, unsigned int bank,
 				     unsigned int reg, u32 mask, u32 val)
 {
-	struct uniphier_gpio_priv *priv = gpiochip_get_data(chip);
+	struct uniphier_gpio_priv *priv = to_uniphier_gpio(chip);
 
 	if (!mask)
 		return;
@@ -100,7 +105,7 @@ static void uniphier_gpio_offset_write(struct gpio_chip *chip,
 static int uniphier_gpio_offset_read(struct gpio_chip *chip,
 				     unsigned int offset, unsigned int reg)
 {
-	struct uniphier_gpio_priv *priv = gpiochip_get_data(chip);
+	struct uniphier_gpio_priv *priv = to_uniphier_gpio(chip);
 	unsigned int bank, reg_offset;
 	u32 mask;
 
@@ -169,7 +174,7 @@ static int uniphier_gpio_to_irq(struct gpio_chip *chip, unsigned int offset)
 	if (offset < UNIPHIER_GPIO_IRQ_OFFSET)
 		return -ENXIO;
 
-	fwspec.fwnode = of_node_to_fwnode(chip->parent->of_node);
+	fwspec.fwnode = of_node_to_fwnode(chip->dev->of_node);
 	fwspec.param_count = 2;
 	fwspec.param[0] = offset - UNIPHIER_GPIO_IRQ_OFFSET;
 	/*
@@ -222,7 +227,7 @@ static int uniphier_gpio_irq_set_type(struct irq_data *data, unsigned int type)
 static int uniphier_gpio_irq_get_parent_hwirq(struct uniphier_gpio_priv *priv,
 					      unsigned int hwirq)
 {
-	struct device_node *np = priv->chip.parent->of_node;
+	struct device_node *np = priv->chip.dev->of_node;
 	const __be32 *range;
 	u32 base, parent_base, size;
 	int len;
@@ -380,7 +385,7 @@ static int uniphier_gpio_probe(struct platform_device *pdev)
 
 	chip = &priv->chip;
 	chip->label = dev_name(dev);
-	chip->parent = dev;
+	chip->dev = dev;
 	chip->request = gpiochip_generic_request;
 	chip->free = gpiochip_generic_free;
 	chip->get_direction = uniphier_gpio_get_direction;
@@ -403,7 +408,7 @@ static int uniphier_gpio_probe(struct platform_device *pdev)
 
 	uniphier_gpio_hw_init(priv);
 
-	ret = devm_gpiochip_add_data(dev, chip, priv);
+	ret = gpiochip_add(chip);
 	if (ret)
 		return ret;
 
@@ -423,6 +428,8 @@ static int uniphier_gpio_probe(struct platform_device *pdev)
 static int uniphier_gpio_remove(struct platform_device *pdev)
 {
 	struct uniphier_gpio_priv *priv = platform_get_drvdata(pdev);
+
+	gpiochip_remove(&priv->chip);
 
 	irq_domain_remove(priv->domain);
 
