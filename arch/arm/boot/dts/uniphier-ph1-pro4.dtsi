@@ -469,6 +469,13 @@
 		sd-uhs-sdr50;
 	};
 
+	aidet: aidet@5fc20000 {
+		compatible = "socionext,uniphier-pro4-aidet";
+		reg = <0x5fc20000 0x200>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
+
 	usb0: usb3_0@65b00000 {
 		compatible = "socionext,ph1-pro4-dwc3";
 		status = "disabled";
