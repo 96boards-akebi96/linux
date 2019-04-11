@@ -35,11 +35,11 @@
 };
 
 &ethsc {
-	interrupts = <0 52 4>;
+	interrupts = <4 8>;
 };
 
 &serialsc {
-	interrupts = <0 52 4>;
+	interrupts = <4 8>;
 };
 
 &serial2 {
