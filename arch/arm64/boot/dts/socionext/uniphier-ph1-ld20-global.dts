@@ -52,6 +52,20 @@
 	status = "okay";
 };
 
+&gpio {
+	xirq0 {
+		gpio-hog;
+		gpios = <UNIPHIER_GPIO_IRQ(0) 1>;
+		input;
+	};
+
+	xirq4 {
+		gpio-hog;
+		gpios = <UNIPHIER_GPIO_IRQ(4) 0>;
+		input;
+	};
+};
+
 &i2c0 {
 	status = "okay";
 
