@@ -8,7 +8,6 @@
 
 /dts-v1/;
 #include "uniphier-ph1-ld20.dtsi"
-#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "Akebi96 Development Board";

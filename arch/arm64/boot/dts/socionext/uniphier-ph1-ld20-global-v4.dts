@@ -16,8 +16,8 @@
 
 	audio_codec1: bd28623 {
 		compatible = "rohm,bd28623";
-		reset-gpios = <&port0x 0 GPIO_ACTIVE_LOW>;
-		mute-gpios = <&port0x 1 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio UNIPHIER_GPIO_PORT(0, 0) GPIO_ACTIVE_LOW>;
+		mute-gpios = <&gpio UNIPHIER_GPIO_PORT(0, 1) GPIO_ACTIVE_LOW>;
 		#sound-dai-cells = <0>;
 	};
 };

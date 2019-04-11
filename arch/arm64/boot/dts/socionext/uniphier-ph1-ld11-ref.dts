@@ -9,7 +9,6 @@
 #include "uniphier-ph1-ld11.dtsi"
 #include "uniphier-ref-daughter.dtsi"
 #include "uniphier-support-card.dtsi"
-#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "UniPhier PH1-LD11 Reference Board";
@@ -60,8 +59,8 @@
 		compatible = "ti,tas5711";
 		reg = <0x1d>;
 		mclk = <384>;
-		reset-gpios = <&port23x 4 GPIO_ACTIVE_LOW>;
-		pdn-gpios = <&port23x 5 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio UNIPHIER_GPIO_PORT(23, 4) GPIO_ACTIVE_LOW>;
+		pdn-gpios = <&gpio UNIPHIER_GPIO_PORT(23, 5) GPIO_ACTIVE_LOW>;
 		#sound-dai-cells = <0>;
 	};
 };
