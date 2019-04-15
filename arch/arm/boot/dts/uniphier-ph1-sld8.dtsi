@@ -320,8 +320,8 @@
 
 &peri {
 	compatible = "socionext,ph1-sld8-perictrl";
-	clock-names = "uart", "i2c";
-	clocks = <&sysctrl 3>, <&sysctrl 4>;
+	clock-names = "uart", "i2c", "spi";
+	clocks = <&sysctrl 3>, <&sysctrl 4>,, <&sysctrl 5>;
 };
 
 &pinctrl {

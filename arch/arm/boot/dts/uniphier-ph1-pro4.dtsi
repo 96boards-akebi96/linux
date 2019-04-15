@@ -559,8 +559,8 @@
 
 &peri {
 	compatible = "socionext,ph1-pro4-perictrl";
-	clock-names = "uart", "fi2c";
-	clocks = <&sysctrl 3>, <&sysctrl 4>;
+	clock-names = "uart", "fi2c", "spi";
+	clocks = <&sysctrl 3>, <&sysctrl 4>, <&sysctrl 5>;
 };
 
 &pinctrl {
