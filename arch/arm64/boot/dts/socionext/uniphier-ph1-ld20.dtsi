@@ -426,6 +426,7 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_aout>;
 			#sound-dai-cells = <1>;
+			socionext,syscon = <&soc_glue>;
 		};
 
 		evea: codec@57900000 {
