@@ -422,7 +422,7 @@
 		audio: audio@56000000 {
 			compatible = "socionext,uniphier-ld20-aio";
 			reg = <0x56000000 0x80000>;
-			interrupts = <0 144 4>, <0 48 1>;
+			interrupts = <0 144 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_aout>;
 			#sound-dai-cells = <1>;

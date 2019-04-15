@@ -66,6 +66,11 @@
 	};
 };
 
+&audio {
+	interrupt-names = "aio", "hp-det";
+	interrupts = <0 144 4>, <0 48 1>;
+};
+
 &i2c0 {
 	status = "okay";
 
