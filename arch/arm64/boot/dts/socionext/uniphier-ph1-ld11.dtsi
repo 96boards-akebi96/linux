@@ -467,8 +467,8 @@
 			compatible = "socionext,ph1-ld20-perictrl";
 			reg = <0x59820000 0x200>;
 			#clock-cells = <1>;
-			clock-names = "uart", "fi2c";
-			clocks = <&sysctrl 3>, <&sysctrl 4>;
+			clock-names = "uart", "fi2c", "spi";
+			clocks = <&sysctrl 3>, <&sysctrl 4>, <&sysctrl 5>;
 		};
 
 		emmc: sdhc@5a000000 {
