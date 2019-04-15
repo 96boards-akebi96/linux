@@ -20,7 +20,7 @@ static struct uniphier_clk_init_data proxstream2_clk_idata[] __initdata = {
 	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 96, 1),		/* 2400 MHz */
 	UNIPHIER_CLK_FACTOR("uart", 3, "spll", 1, 27),
 	UNIPHIER_CLK_FACTOR("fi2c", 4, "spll", 1, 48),
-	UNIPHIER_CLK_FACTOR("spi", -1, "spll", 1, 48),
+	UNIPHIER_CLK_FACTOR("spi", 5, "spll", 1, 48),
 	UNIPHIER_CLK_FACTOR("arm-scu", 7, "spll", 1, 48),
 	UNIPHIER_CLK_GATE("ether-clken", -1, NULL, 0x2104, 12),
 	UNIPHIER_CLK_GATE("ether", 8, "ether-clken", 0x2000, 12),

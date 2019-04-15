@@ -25,7 +25,7 @@ static struct uniphier_clk_init_data ph1_ld20_clk_idata[] __initdata = {
 	UNIPHIER_CLK_FACTOR("vppll", -1, "ref", 504, 5),	/* 2520 MHz */
 	UNIPHIER_CLK_FACTOR("uart", 3, "spll", 1, 34),
 	UNIPHIER_CLK_FACTOR("fi2c", 4, "spll", 1, 40),
-	UNIPHIER_CLK_FACTOR("spi", -1, "spll", 1, 40),
+	UNIPHIER_CLK_FACTOR("spi", 5, "spll", 1, 40),
 	UNIPHIER_CLK_GATE("ether-clken", -1, NULL, 0x2104, 6),
 	UNIPHIER_CLK_GATE("ether", 8, "ether-clken", 0x200c, 6),
 	UNIPHIER_CLK_GATE("stdmac-clken", -1, NULL, 0x210c, 8),
