@@ -1276,8 +1276,7 @@ static int max3420_probe(struct spi_device *spi)
 		}
 	}
 
-	udc->thread_task = kthread_create(max3420_thread, udc,
-					  "max3420-thread");
+	udc->thread_task = kthread_run(max3420_thread, udc, "max3420-thread");
 	if (IS_ERR(udc->thread_task)) {
 		dev_err(&spi->dev,
 			"failed to create SPI thread (out of memory)\n");
