@@ -45,6 +45,14 @@
 	status = "okay";
 };
 
+&i2c0 {
+	status = "okay";
+};
+
+&i2c4 {
+	status = "okay";
+};
+
 &emmc {
 	status = "okay";
 };
@@ -91,5 +99,18 @@
 		gpio-hog;
 		gpios = <UNIPHIER_GPIO_IRQ(10) 1>;
 		input;
+	};
+};
+
+&soc {
+	frontend {
+		compatible = "socionext,uniphier-ld20-mn884434-helene";
+		clock-names = "demod-mclk";
+		clocks = <&demod_clk>;
+		demux = <&hsc>;
+		reset-demod-gpios = <&gpio UNIPHIER_GPIO_PORT(24, 0) GPIO_ACTIVE_LOW>;
+		demod-i2c-bus = <&i2c0>;
+		reset-tuner-gpios = <&gpio UNIPHIER_GPIO_PORT(0, 4) GPIO_ACTIVE_LOW>;
+		tuner-i2c-bus = <&i2c4>;
 	};
 };

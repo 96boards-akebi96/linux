@@ -241,6 +241,13 @@
 			compatible = "fixed-clock";
 			clock-frequency = <25000000>;
 		};
+
+		demod_clk: demod {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <25400000>;
+			clock-accuracy = <100>;
+		};
 	};
 
 	timer {
@@ -563,6 +570,16 @@
 			clocks = <&mio 0>;
 			bus-width = <4>;
 			cap-sd-highspeed;
+		};
+
+		hsc: hsc@5c000000 {
+			compatible = "socionext,uniphier-ld20-hsc";
+			reg = <0x5c000000 0x100000>;
+			interrupts = <0 100 4>, <0 101 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hscin2_s>, <&pinctrl_hscin3_s>;
+			clock-names = "stdmac";
+			clocks = <&sysctrl 10>;
 		};
 
 		soc_glue: soc-glue@5f800000 {
