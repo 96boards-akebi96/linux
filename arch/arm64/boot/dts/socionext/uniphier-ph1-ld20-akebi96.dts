@@ -41,6 +41,10 @@
 	status = "okay";
 };
 
+&serial2 {
+	status = "okay";
+};
+
 &serial3 {
 	status = "okay";
 };
@@ -76,6 +80,10 @@
 	status = "okay";
 };
 
+&audio {
+	pinctrl-0 = <&pinctrl_aout1x>, <&pinctrl_aoutiec1>;
+};
+
 &spi3 {
 	status = "okay";
 	#address-cells = <1>;
@@ -102,7 +110,32 @@
 	};
 };
 
+&pinctrl_ether_rgmii {
+	tx {
+		pins = "RGMII_TXD0", "RGMII_TXD1", "RGMII_TXD2",
+		       "RGMII_TXD3", "RGMII_TXCTL";
+		drive-strength = <12>;
+	};
+
+	txclk {
+		pins = "RGMII_TXCLK";
+		drive-strength = <9>;
+	};
+};
+
 &soc {
+	sound {
+		/delete-property/ simple-audio-card,widgets;
+		/delete-node/ simple-audio-card,dai-link@0;
+		/delete-node/ simple-audio-card,dai-link@1;
+		/* 2: SPDIF */
+		/delete-node/ simple-audio-card,dai-link@3;
+		/delete-node/ simple-audio-card,dai-link@4;
+		/* 5: THRU-OUT */
+		/delete-node/ simple-audio-card,dai-link@6;
+		/delete-node/ simple-audio-card,dai-link@7;
+	};
+
 	frontend {
 		compatible = "socionext,uniphier-ld20-mn884434-helene";
 		clock-names = "demod-mclk";
