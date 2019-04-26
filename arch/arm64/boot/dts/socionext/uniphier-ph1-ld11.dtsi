@@ -238,7 +238,7 @@
 			reg = <0x56000000 0x80000>;
 			interrupts = <0 144 4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_aout>;
+			pinctrl-0 = <&pinctrl_aout1>;
 			#sound-dai-cells = <1>;
 			socionext,syscon = <&soc_glue>;
 		};
@@ -608,7 +608,7 @@
 
 #include "uniphier-pinctrl.dtsi"
 
-&pinctrl_aout {
+&pinctrl_aout1 {
 	drive-strength = <4>;	/* default: 4mA */
 	group_1 {
 		pins = "AO1ARC";
