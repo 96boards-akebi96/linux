@@ -551,6 +551,9 @@ static void hs_phy_setup_ld20(struct dwc3_uniphier *dwc3u, int hs_instances)
 
 		/* parameter number 10 */
 		hs_phy_int_param_set(hs_phy_addr, 10, 0x60);
+		/* WORKAROUND: Avoid rare HS communication failure */
+		hs_phy_int_param_set(hs_phy_addr,  0, 0x20);
+		hs_phy_int_param_set(hs_phy_addr,  1, 0x01);
 	}
 
 	return;
