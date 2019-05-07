@@ -229,6 +229,7 @@
 			interrupts = <0 134 4>;
 			dr_mode = "host";
 			tx-fifo-resize;
+			snps,dis_u3_susply_quirk;
 		};
 	};
 
@@ -251,6 +252,7 @@
 			interrupts = <0 137 4>;
 			dr_mode = "host";
 			tx-fifo-resize;
+			snps,dis_u3_susply_quirk;
 		};
 
 	};
