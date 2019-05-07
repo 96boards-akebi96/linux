@@ -80,10 +80,6 @@
 	status = "okay";
 };
 
-&audio {
-	pinctrl-0 = <&pinctrl_aout1x>, <&pinctrl_aoutiec1>;
-};
-
 &spi3 {
 	status = "okay";
 	#address-cells = <1>;
@@ -131,7 +127,7 @@
 		/* 2: SPDIF */
 		/delete-node/ simple-audio-card,dai-link@3;
 		/delete-node/ simple-audio-card,dai-link@4;
-		/* 5: THRU-OUT */
+		/delete-node/ simple-audio-card,dai-link@5;
 		/delete-node/ simple-audio-card,dai-link@6;
 		/delete-node/ simple-audio-card,dai-link@7;
 	};
