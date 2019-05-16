@@ -9,7 +9,7 @@
 #include <dt-bindings/gpio/uniphier-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
 
-/memreserve/ 0x80000000 0x02000000;
+/memreserve/ 0x80000000 0x00080000;
 
 / {
 	compatible = "socionext,ph1-ld20";
