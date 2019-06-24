@@ -577,7 +577,8 @@
 			reg = <0x5c000000 0x100000>;
 			interrupts = <0 100 4>, <0 101 4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_hscin2_s>, <&pinctrl_hscin3_s>;
+			pinctrl-0 = <&pinctrl_hscin2_s>, <&pinctrl_hscin3_s>,
+				    <&pinctrl_hscin4_s>;
 			clock-names = "stdmac";
 			clocks = <&sysctrl 10>;
 		};
