@@ -111,6 +111,11 @@
 		function = "hscin3";
 	};
 
+	pinctrl_hscin4_s: hscin4-s {
+		groups = "hscin4_s";
+		function = "hscin4";
+	};
+
 	pinctrl_emmc_1v8: emmc_1v8 {
 		groups = "emmc", "emmc_dat8";
 		function = "emmc";
