@@ -4683,7 +4683,7 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	/* force disable usb2_hardware_lpm */
 	/* by emulating usb2_hardware_lpm_store() (sysfs write) operation */
 	udev->usb2_hw_lpm_allowed = 0;
-	usb_set_usb2_hardware_lpm(udev, 0);
+	usb_disable_usb2_hardware_lpm(udev);
 #endif
 
 fail:
