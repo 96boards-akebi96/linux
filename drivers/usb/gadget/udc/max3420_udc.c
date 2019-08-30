@@ -276,48 +276,46 @@ static void spi_wr8(struct max3420_udc *udc, u8 reg, u8 val)
 static void spi_rd_buf(struct max3420_udc *udc, u8 reg, void *buf, u8 len)
 {
 	struct spi_device *spi = udc->spi;
-	struct spi_transfer transfer[2];
+	struct spi_transfer transfer;
 	struct spi_message msg;
-	u8 txdata[1];
+	u8 local_buf[EP_MAX_PACKET + 1] = {};
 
-	memset(transfer, 0, sizeof(transfer));
+	memset(&transfer, 0, sizeof(transfer));
 
 	spi_message_init(&msg);
 
-	txdata[0] = (field(reg, MAX3420_SPI_REG_SHIFT) |
-			 field(MAX3420_SPI_DIR_RD, MAX3420_SPI_DIR_SHIFT));
-	transfer[0].tx_buf = txdata;
-	transfer[0].len = 1;
+	local_buf[0] = (field(reg, MAX3420_SPI_REG_SHIFT) |
+			field(MAX3420_SPI_DIR_RD, MAX3420_SPI_DIR_SHIFT));
 
-	transfer[1].rx_buf = buf;
-	transfer[1].len = len;
+	transfer.tx_buf = &local_buf[0];
+	transfer.rx_buf = &local_buf[0];
+	transfer.len = len + 1;
 
-	spi_message_add_tail(&transfer[0], &msg);
-	spi_message_add_tail(&transfer[1], &msg);
+	spi_message_add_tail(&transfer, &msg);
 	spi_sync(spi, &msg);
+
+	memcpy(buf, &local_buf[1], len);
 }
 
 static void spi_wr_buf(struct max3420_udc *udc, u8 reg, void *buf, u8 len)
 {
 	struct spi_device *spi = udc->spi;
-	struct spi_transfer transfer[2];
+	struct spi_transfer transfer;
 	struct spi_message msg;
-	u8 txdata[1];
+	u8 local_buf[EP_MAX_PACKET + 1] = {};
 
-	memset(transfer, 0, sizeof(transfer));
+	memset(&transfer, 0, sizeof(transfer));
 
 	spi_message_init(&msg);
 
-	txdata[0] = (field(reg, MAX3420_SPI_REG_SHIFT) |
-			 field(MAX3420_SPI_DIR_WR, MAX3420_SPI_DIR_SHIFT));
-	transfer[0].tx_buf = txdata;
-	transfer[0].len = 1;
+	local_buf[0] = (field(reg, MAX3420_SPI_REG_SHIFT) |
+			field(MAX3420_SPI_DIR_WR, MAX3420_SPI_DIR_SHIFT));
+	memcpy(&local_buf[1], buf, len);
 
-	transfer[1].tx_buf = buf;
-	transfer[1].len = len;
+	transfer.tx_buf = local_buf;
+	transfer.len = len + 1;
 
-	spi_message_add_tail(&transfer[0], &msg);
-	spi_message_add_tail(&transfer[1], &msg);
+	spi_message_add_tail(&transfer, &msg);
 	spi_sync(spi, &msg);
 }
 
