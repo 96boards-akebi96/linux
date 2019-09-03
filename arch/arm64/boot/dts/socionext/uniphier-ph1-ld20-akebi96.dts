@@ -87,7 +87,7 @@
 	usb-over-spi@0 {
 		compatible = "maxim,max3421-udc";
 		reg = <0>;
-		spi-max-frequency = <10000000>;
+		spi-max-frequency = <12500000>;
 		interrupt-parent = <&gpio>;
 		interrupts = <0 2>, <10 3>;
 	};
