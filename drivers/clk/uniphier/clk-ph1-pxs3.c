@@ -45,8 +45,8 @@ static struct uniphier_clk_init_data ph1_pxs3_clk_idata[] __initdata = {
 	UNIPHIER_CLK_GATEX("ahci-phy", -1, NULL, 0x200c, 21),
 	UNIPHIER_CLK_GATE("ahci0-link-clken", -1, "ahci-phy", 0x210c, 7),
 	UNIPHIER_CLK_GATE("ahci0-link", 25, "ahci0-link-clken", 0x200c, 7),
-	UNIPHIER_CLK_GATE("ahci1-link-clken", 26, "ahci-phy", 0x210c, 8),
-	UNIPHIER_CLK_GATE("ahci1-link", -1, "ahci1-link-clken", 0x200c, 8),
+	UNIPHIER_CLK_GATE("ahci1-link-clken", -1, "ahci-phy", 0x210c, 8),
+	UNIPHIER_CLK_GATE("ahci1-link", 26, "ahci1-link-clken", 0x200c, 8),
 	UNIPHIER_CLK_GATE("pcie-clken", -1, NULL, 0x210c, 3),
 	UNIPHIER_CLK_GATE("pcie", 27, "pcie-clken", 0x200c, 3),
 	/* CPU gears */
