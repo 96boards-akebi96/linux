@@ -105,6 +105,9 @@ EXPORT_SYMBOL_GPL(reset_control_reset);
  */
 int reset_control_assert(struct reset_control *rstc)
 {
+	if (!rstc)
+		return 0;
+
 	if (rstc->rcdev->ops->assert)
 		return rstc->rcdev->ops->assert(rstc->rcdev, rstc->id);
 
@@ -118,6 +121,9 @@ EXPORT_SYMBOL_GPL(reset_control_assert);
  */
 int reset_control_deassert(struct reset_control *rstc)
 {
+	if (!rstc)
+		return 0;
+
 	if (rstc->rcdev->ops->deassert)
 		return rstc->rcdev->ops->deassert(rstc->rcdev, rstc->id);
 
