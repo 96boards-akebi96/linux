@@ -451,8 +451,10 @@ do {									\
 ({									\
 	int __gu_err;							\
 	__inttype(*(ptr)) __gu_val;					\
+	__typeof__(ptr) __gu_ptr = (ptr);				\
+	__typeof__(size) __gu_size = (size);				\
 	__uaccess_begin_nospec();					\
-	__get_user_size(__gu_val, (ptr), (size), __gu_err, -EFAULT);	\
+	__get_user_size(__gu_val, __gu_ptr, __gu_size, __gu_err, -EFAULT);	\
 	__uaccess_end();						\
 	(x) = (__force __typeof__(*(ptr)))__gu_val;			\
 	__builtin_expect(__gu_err, 0);					\
@@ -721,6 +723,9 @@ static __must_check inline bool user_access_begin(int type,
 
 #define user_access_begin(a, b, c)	user_access_begin(a, b, c)
 #define user_access_end()	__uaccess_end()
+
+#define user_access_save()	smap_save()
+#define user_access_restore(x)	smap_restore(x)
 
 #define unsafe_put_user(x, ptr, err_label)					\
 do {										\
