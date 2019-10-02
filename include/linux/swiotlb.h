@@ -2,10 +2,12 @@
 #define __LINUX_SWIOTLB_H
 
 #include <linux/dma-direction.h>
+#include <linux/init.h>
 #include <linux/types.h>
 
 struct device;
 struct dma_attrs;
+struct page;
 struct scatterlist;
 
 extern int swiotlb_force;
