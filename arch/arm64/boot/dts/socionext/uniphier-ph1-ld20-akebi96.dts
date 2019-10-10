@@ -106,6 +106,10 @@
 	};
 };
 
+&audio {
+	pinctrl-0 = <&pinctrl_aout1b>, <&pinctrl_aoutiec1>;
+};
+
 &pinctrl_ether_rgmii {
 	tx {
 		pins = "RGMII_TXD0", "RGMII_TXD1", "RGMII_TXD2",
