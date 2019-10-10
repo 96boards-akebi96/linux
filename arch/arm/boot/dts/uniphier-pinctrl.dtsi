@@ -6,11 +6,6 @@
 //   Author: Masahiro Yamada <yamada.masahiro@socionext.com>
 
 &pinctrl {
-	pinctrl_aout: aout {
-		groups = "aout";
-		function = "aout";
-	};
-
 	pinctrl_ain1: ain1 {
 		groups = "ain1";
 		function = "ain1";
@@ -31,9 +26,9 @@
 		function = "aout1";
 	};
 
-	pinctrl_aout1x: aout1x {
-		groups = "aout1x";
-		function = "aout1x";
+	pinctrl_aout1b: aout1b {
+		groups = "aout1b";
+		function = "aout1";
 	};
 
 	pinctrl_aout2: aout2 {
