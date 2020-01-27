@@ -81,6 +81,31 @@
 		function = "ether1_rmii";
 	};
 
+	pinctrl_hscin0_s: hscin0-s {
+		groups = "hscin0_s";
+		function = "hscin0";
+	};
+
+	pinctrl_hscin1_s: hscin1-s {
+		groups = "hscin1_s";
+		function = "hscin1";
+	};
+
+	pinctrl_hscin2_s: hscin2-s {
+		groups = "hscin2_s";
+		function = "hscin2";
+	};
+
+	pinctrl_hscin3_s: hscin3-s {
+		groups = "hscin3_s";
+		function = "hscin3";
+	};
+
+	pinctrl_hscin4_s: hscin4-s {
+		groups = "hscin4_s";
+		function = "hscin4";
+	};
+
 	pinctrl_i2c0: i2c0 {
 		groups = "i2c0";
 		function = "i2c0";
