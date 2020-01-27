@@ -35,6 +35,10 @@ int uniphier_adapter_demux_probe(struct uniphier_adapter_priv *priv)
 	of_node_put(node);
 
 	priv->chip = platform_get_drvdata(priv->pdev_demux);
+	if (!priv->chip) {
+		dev_err(dev, "Failed to get demux data\n");
+		return -ENODEV;
+	}
 
 	for (i = 0; i < spec->adapters; i++) {
 		ret = hsc_tsif_init(&priv->chip->tsif[i], &spec->hsc_conf[i]);
