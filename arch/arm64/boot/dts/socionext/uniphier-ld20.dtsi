@@ -169,6 +169,13 @@
 			#clock-cells = <0>;
 			clock-frequency = <25000000>;
 		};
+
+		demod_clk: demod {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <25400000>;
+			clock-accuracy = <100>;
+		};
 	};
 
 	emmc_pwrseq: emmc-pwrseq {
@@ -218,7 +225,7 @@
 		};
 	};
 
-	soc@0 {
+	soc: soc@0 {
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -584,6 +591,19 @@
 			resets = <&sd_rst 0>;
 			bus-width = <4>;
 			cap-sd-highspeed;
+		};
+
+		hsc: hsc@5c000000 {
+			compatible = "socionext,uniphier-ld20-hsc";
+			reg = <0x5c000000 0x100000>;
+			interrupts = <0 100 4>, <0 101 4>, <0 102 4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hscin2_s>, <&pinctrl_hscin3_s>,
+				    <&pinctrl_hscin4_s>;
+			clock-names = "stdmac", "hsc";
+			clocks = <&sys_clk 8>, <&sys_clk 9>;
+			reset-names = "stdmac", "hsc";
+			resets = <&sys_rst 8>, <&sys_rst 9>;
 		};
 
 		voc: voc@5f000000 {
