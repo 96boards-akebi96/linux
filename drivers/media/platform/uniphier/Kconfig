@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0
+config DVB_UNIPHIER
+	tristate "Socionext UniPhier Frontend"
+	depends on DVB_CORE && OF
+	depends on ARCH_UNIPHIER || COMPILE_TEST
+	select FW_LOADER
+	select REGMAP_MMIO
+	help
+	  Driver for UniPhier frontend for MPEG2-TS input/output,
+	  demux and descramble.
+	  Say Y when you want to support this frontend.
