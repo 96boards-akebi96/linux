@@ -586,6 +586,20 @@
 			cap-sd-highspeed;
 		};
 
+		voc: voc@5f000000 {
+			compatible = "socionext,uniphier-ld20-voc";
+			reg-names = "voc_voc", "voc_sg2", "voc_lvl","voc_afbcd";
+			reg = <0x5F000000 0x800000>, <0x55000000 0x1000>,
+			      <0x5983A000 0x2000>, <0x6E230000 0x1000>;
+			interrupt-names = "voc_vout7", "voc_vout5",
+					  "voc_vout4", "voc_vout3",
+					  "voc_vout2", "voc_vout1";
+			interrupts = <0 117 4>, <0 115 4>, <0 114 4>,
+				     <0 113 4>, <0 112 4>, <0 109 4>;
+			socionext,soc-glue = <&soc_glue>;
+			socionext,sysctrl = <&sysctrl>;
+		};
+
 		soc_glue: soc-glue@5f800000 {
 			compatible = "socionext,uniphier-ld20-soc-glue",
 				     "simple-mfd", "syscon";
@@ -674,7 +688,7 @@
 			interrupts = <1 9 4>;
 		};
 
-		sysctrl@61840000 {
+		sysctrl: sysctrl@61840000 {
 			compatible = "socionext,uniphier-ld20-sysctrl",
 				     "simple-mfd", "syscon";
 			reg = <0x61840000 0x10000>;
