@@ -785,6 +785,15 @@
 			clocks = <&sys_clk 2>;
 			resets = <&sys_rst 2>;
 		};
+
+		gpu@6e220000 {
+			compatible = "arm,mali-midgard";
+			reg = <0x6e220000 0x4000>;
+			interrupt-names = "JOB", "MMU", "GPU";
+			interrupts = <0 239 4>, <0 240 4>, <0 238 4>;
+			clocks = <&sys_clk 48>;
+			resets = <&sys_rst 48>;
+		};
 	};
 };
 
