@@ -416,9 +416,15 @@ static int spi_max3420_rwkup(struct max3420_udc *udc)
 	return 1;
 }
 
+static void max3420_nuke(struct max3420_ep *ep, int status);
 static void __max3421_stop(struct max3420_udc *udc)
 {
 	u8 val;
+	int i;
+
+	/* clear all pending requests */
+	for (i = 1; i < MAX3420_MAX_EPS; i++)
+		max3420_nuke(&udc->ep[i], -ECONNRESET);
 
 	/* Disable IRQ to CPU */
 	spi_wr8(udc, MAX3420_REG_CPUCTL, 0);
@@ -432,8 +438,6 @@ static void __max3421_stop(struct max3420_udc *udc)
 	spi_wr8(udc, MAX3420_REG_USBCTL, val);
 }
 
-static int __max3420_ep_enable(struct max3420_ep *ep,
-			      const struct usb_endpoint_descriptor *desc);
 static void __max3421_start(struct max3420_udc *udc)
 {
 	u8 val;
@@ -505,6 +509,9 @@ static irqreturn_t max3420_xirq10_handler(int irq, void *dev_id)
 	/* its a vbus change interrupt */
 	udc->vbus_active = !udc->vbus_active;
 	udc->todo |= UDC_START;
+	usb_udc_vbus_handler(&udc->gadget, udc->vbus_active);
+	usb_gadget_set_state(&udc->gadget, udc->vbus_active
+			     ? USB_STATE_POWERED : USB_STATE_NOTATTACHED);
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	if (udc->thread_task &&
