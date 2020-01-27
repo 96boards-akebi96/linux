@@ -88,6 +88,12 @@
 #define UNIPHIER_LD11_SYS_CLK_ETHER(idx)				\
 	UNIPHIER_CLK_GATE("ether", (idx), NULL, 0x210c, 6)
 
+#define UNIPHIER_PRO5_SYS_CLK_GPU(idx, ch)				\
+	UNIPHIER_CLK_GATE("gpu" #ch, (idx), NULL, 0x2150 + 4 * (ch), 0)
+
+#define UNIPHIER_LD11_SYS_CLK_GPU(idx)					\
+	UNIPHIER_CLK_GATE("gpu", (idx), NULL, 0x2114, 8)
+
 const struct uniphier_clk_data uniphier_ld4_sys_clk_data[] = {
 	UNIPHIER_CLK_FACTOR("spll", -1, "ref", 65, 1),		/* 1597.44 MHz */
 	UNIPHIER_CLK_FACTOR("upll", -1, "ref", 6000, 512),	/* 288 MHz */
@@ -130,6 +136,7 @@ const struct uniphier_clk_data uniphier_pro4_sys_clk_data[] = {
 	UNIPHIER_CLK_GATE("sata0", 28, NULL, 0x2104, 18),
 	UNIPHIER_CLK_GATE("sata1", 29, NULL, 0x2104, 19),
 	UNIPHIER_PRO4_SYS_CLK_AIO(40),
+	UNIPHIER_CLK_GATE("gpu", 48, NULL, 0x2104, 15),
 	{ /* sentinel */ }
 };
 
@@ -164,6 +171,9 @@ const struct uniphier_clk_data uniphier_pro5_sys_clk_data[] = {
 	UNIPHIER_PRO4_SYS_CLK_USB3(15, 1),
 	UNIPHIER_CLK_GATE("pcie", 24, NULL, 0x2108, 2),
 	UNIPHIER_PRO5_SYS_CLK_AIO(40),
+	UNIPHIER_PRO5_SYS_CLK_GPU(48, 0),
+	UNIPHIER_PRO5_SYS_CLK_GPU(49, 1),
+	UNIPHIER_PRO5_SYS_CLK_GPU(50, 2),
 	{ /* sentinel */ }
 };
 
@@ -188,6 +198,7 @@ const struct uniphier_clk_data uniphier_pxs2_sys_clk_data[] = {
 	UNIPHIER_CLK_FACTOR("usb31-ssphy0", 21, "ref", 1, 1),
 	UNIPHIER_CLK_GATE("sata0", 28, NULL, 0x2104, 22),
 	UNIPHIER_PRO5_SYS_CLK_AIO(40),
+	UNIPHIER_PRO5_SYS_CLK_GPU(48, 0),
 	{ /* sentinel */ }
 };
 
@@ -210,6 +221,7 @@ const struct uniphier_clk_data uniphier_ld11_sys_clk_data[] = {
 	UNIPHIER_LD11_SYS_CLK_AIO(40),
 	UNIPHIER_LD11_SYS_CLK_EVEA(41),
 	UNIPHIER_LD11_SYS_CLK_EXIV(42),
+	UNIPHIER_LD11_SYS_CLK_GPU(48),
 	/* CPU gears */
 	UNIPHIER_CLK_DIV4("cpll", 2, 3, 4, 8),
 	UNIPHIER_CLK_DIV4("mpll", 2, 3, 4, 8),
@@ -256,6 +268,7 @@ const struct uniphier_clk_data uniphier_ld20_sys_clk_data[] = {
 	UNIPHIER_LD11_SYS_CLK_AIO(40),
 	UNIPHIER_LD11_SYS_CLK_EVEA(41),
 	UNIPHIER_LD11_SYS_CLK_EXIV(42),
+	UNIPHIER_LD11_SYS_CLK_GPU(48),
 	/* CPU gears */
 	UNIPHIER_CLK_DIV4("cpll", 2, 3, 4, 8),
 	UNIPHIER_CLK_DIV4("spll", 2, 3, 4, 8),
@@ -297,6 +310,8 @@ const struct uniphier_clk_data uniphier_pxs3_sys_clk_data[] = {
 	UNIPHIER_CLK_GATE("sata0", 28, NULL, 0x210c, 7),
 	UNIPHIER_CLK_GATE("sata1", 29, NULL, 0x210c, 8),
 	UNIPHIER_CLK_GATE("sata-phy", 30, NULL, 0x210c, 21),
+	UNIPHIER_LD11_SYS_CLK_GPU(48),
+	UNIPHIER_CLK_GATE("gpu1", 49, NULL, 0x2114, 7),
 	/* CPU gears */
 	UNIPHIER_CLK_DIV4("cpll", 2, 3, 4, 8),
 	UNIPHIER_CLK_DIV4("spll", 2, 3, 4, 8),
