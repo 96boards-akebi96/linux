@@ -9,3 +9,6 @@ ccflags-y += -I$(srctree)/drivers/media/tuners/
 
 uniphier-ld11-mn884433-helene-y += uniphier-adapter.o ld11-mn884433-helene.o
 obj-$(CONFIG_DVB_UNIPHIER_LD11_ISDB) += uniphier-ld11-mn884433-helene.o
+
+uniphier-ld20-mn884434-helene-y += uniphier-adapter.o ld20-mn884434-helene.o
+obj-$(CONFIG_DVB_UNIPHIER_LD20_ISDB) += uniphier-ld20-mn884434-helene.o

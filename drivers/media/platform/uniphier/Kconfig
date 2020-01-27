@@ -29,3 +29,15 @@ config DVB_UNIPHIER_LD11_ISDB
 	  Demod: Socionext MN884433
 	  Tuner: SONY HELENE (CXD2858ER)
 	  Say Y when you want to support this adapters.
+
+config DVB_UNIPHIER_LD20_ISDB
+	tristate "Support UniPhier LD20 ISDB adapters"
+	depends on DVB_UNIPHIER
+	select DVB_MN88443X if MEDIA_SUBDRV_AUTOSELECT
+	select DVB_HELENE if MEDIA_SUBDRV_AUTOSELECT
+	help
+	  Driver for LD20 ISDB-S/T adapters which use
+	  Demux: Socionext LD20 HSC
+	  Demod: Socionext MN884434
+	  Tuner: SONY HELENE (CXD2858ER)
+	  Say Y when you want to support this adapters.
