@@ -239,8 +239,8 @@ static const struct hsc_spec_dma uniphier_hsc_ld11_dma_out[] = {
 };
 
 const struct hsc_spec uniphier_hsc_ld11_spec = {
-	.ucode_spu     = { "hsc_spu_code_ld11.bin", "hsc_spu_data_ld11.bin" },
-	.ucode_ace     = { "hsc_ace_code_ld11.bin", "hsc_ace_data_ld11.bin" },
+	.ucode_spu     = { "hsc_spu_code.bin", "hsc_spu_data.bin" },
+	.ucode_ace     = { "hsc_ace_code.bin", "hsc_ace_data.bin" },
 	.init_rams     = uniphier_hsc_ld11_init_rams,
 	.num_init_rams = ARRAY_SIZE(uniphier_hsc_ld11_init_rams),
 	.css_in        = uniphier_hsc_ld11_css_in,
@@ -256,8 +256,8 @@ const struct hsc_spec uniphier_hsc_ld11_spec = {
 };
 
 const struct hsc_spec uniphier_hsc_ld20_spec = {
-	.ucode_spu     = { "hsc_spu_code_ld11.bin", "hsc_spu_data_ld11.bin" },
-	.ucode_ace     = { "hsc_ace_code_ld11.bin", "hsc_ace_data_ld11.bin" },
+	.ucode_spu     = { "hsc_spu_code.bin", "hsc_spu_data.bin" },
+	.ucode_ace     = { "hsc_ace_code.bin", "hsc_ace_data.bin" },
 	.init_rams     = uniphier_hsc_ld20_init_rams,
 	.num_init_rams = ARRAY_SIZE(uniphier_hsc_ld20_init_rams),
 	.css_in        = uniphier_hsc_ld11_css_in,
