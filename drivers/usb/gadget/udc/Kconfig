@@ -441,6 +441,16 @@ config USB_GADGET_XILINX
 
 source "drivers/usb/gadget/udc/aspeed-vhub/Kconfig"
 
+config USB_MAX3420_UDC
+	tristate "MAX3420 (USB-over-SPI) support"
+	depends on USB && SPI
+	---help---
+	  The Maxim MAX3420 chip supports standard USB 2.0-compliant
+	  full-speed devices in peripheral mode.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called max3420_udc
+
 #
 # LAST -- dummy/emulated controller
 #
