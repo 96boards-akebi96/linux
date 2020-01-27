@@ -1146,6 +1146,11 @@ static int create_synth_event(int argc, char **argv)
 	return ret;
 }
 
+int synth_event_run_command(const char *command)
+{
+	return trace_run_command(command, create_synth_event);
+}
+
 static int release_all_synth_events(void)
 {
 	struct synth_event *event, *e;
