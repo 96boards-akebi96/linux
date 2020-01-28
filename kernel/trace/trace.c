@@ -158,7 +158,7 @@ union trace_eval_map_item {
 static union trace_eval_map_item *trace_eval_maps;
 #endif /* CONFIG_TRACE_EVAL_MAP_FILE */
 
-static int tracing_set_tracer(struct trace_array *tr, const char *buf);
+int tracing_set_tracer(struct trace_array *tr, const char *buf);
 
 #define MAX_TRACER_SIZE		100
 static char bootup_tracer_buf[MAX_TRACER_SIZE] __initdata;
@@ -2321,6 +2321,7 @@ static DEFINE_MUTEX(tracepoint_printk_mutex);
 static void output_printk(struct trace_event_buffer *fbuffer)
 {
 	struct trace_event_call *event_call;
+	struct trace_event_file *file;
 	struct trace_event *event;
 	unsigned long flags;
 	struct trace_iterator *iter = tracepoint_print_iter;
@@ -2332,6 +2333,12 @@ static void output_printk(struct trace_event_buffer *fbuffer)
 	event_call = fbuffer->trace_file->event_call;
 	if (!event_call || !event_call->event.funcs ||
 	    !event_call->event.funcs->trace)
+		return;
+
+	file = fbuffer->trace_file;
+	if (test_bit(EVENT_FILE_FL_SOFT_DISABLED_BIT, &file->flags) ||
+	    (unlikely(file->flags & EVENT_FILE_FL_FILTERED) &&
+	     !filter_match_preds(file->filter, fbuffer->entry)))
 		return;
 
 	event = &fbuffer->trace_file->event_call->event;
@@ -2384,9 +2391,9 @@ void trace_event_buffer_commit(struct trace_event_buffer *fbuffer)
 	if (static_key_false(&tracepoint_printk_key.key))
 		output_printk(fbuffer);
 
-	event_trigger_unlock_commit(fbuffer->trace_file, fbuffer->buffer,
+	event_trigger_unlock_commit_regs(fbuffer->trace_file, fbuffer->buffer,
 				    fbuffer->event, fbuffer->entry,
-				    fbuffer->flags, fbuffer->pc);
+				    fbuffer->flags, fbuffer->pc, fbuffer->regs);
 }
 EXPORT_SYMBOL_GPL(trace_event_buffer_commit);
 
@@ -2880,6 +2887,7 @@ void trace_printk_init_buffers(void)
 	if (global_trace.trace_buffer.buffer)
 		tracing_start_cmdline_record();
 }
+EXPORT_SYMBOL_GPL(trace_printk_init_buffers);
 
 void trace_printk_start_comm(void)
 {
@@ -3040,6 +3048,7 @@ int trace_array_printk(struct trace_array *tr,
 	va_end(ap);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(trace_array_printk);
 
 __printf(3, 4)
 int trace_array_printk_buf(struct ring_buffer *buffer,
@@ -4239,20 +4248,13 @@ out_err:
 	return count;
 }
 
-static ssize_t
-tracing_cpumask_write(struct file *filp, const char __user *ubuf,
-		      size_t count, loff_t *ppos)
+int tracing_set_cpumask(struct trace_array *tr,
+			cpumask_var_t tracing_cpumask_new)
 {
-	struct trace_array *tr = file_inode(filp)->i_private;
-	cpumask_var_t tracing_cpumask_new;
-	int err, cpu;
+	int cpu;
 
-	if (!alloc_cpumask_var(&tracing_cpumask_new, GFP_KERNEL))
-		return -ENOMEM;
-
-	err = cpumask_parse_user(ubuf, count, tracing_cpumask_new);
-	if (err)
-		goto err_unlock;
+	if (!tr)
+		return -EINVAL;
 
 	local_irq_disable();
 	arch_spin_lock(&tr->max_lock);
@@ -4276,11 +4278,34 @@ tracing_cpumask_write(struct file *filp, const char __user *ubuf,
 	local_irq_enable();
 
 	cpumask_copy(tr->tracing_cpumask, tracing_cpumask_new);
+
+	return 0;
+}
+
+static ssize_t
+tracing_cpumask_write(struct file *filp, const char __user *ubuf,
+		      size_t count, loff_t *ppos)
+{
+	struct trace_array *tr = file_inode(filp)->i_private;
+	cpumask_var_t tracing_cpumask_new;
+	int err;
+
+	if (!alloc_cpumask_var(&tracing_cpumask_new, GFP_KERNEL))
+		return -ENOMEM;
+
+	err = cpumask_parse_user(ubuf, count, tracing_cpumask_new);
+	if (err)
+		goto err_free;
+
+	err = tracing_set_cpumask(tr, tracing_cpumask_new);
+	if (err)
+		goto err_free;
+
 	free_cpumask_var(tracing_cpumask_new);
 
 	return count;
 
-err_unlock:
+err_free:
 	free_cpumask_var(tracing_cpumask_new);
 
 	return err;
@@ -4425,7 +4450,7 @@ int set_tracer_flag(struct trace_array *tr, unsigned int mask, int enabled)
 	return 0;
 }
 
-static int trace_set_options(struct trace_array *tr, char *option)
+int trace_set_options(struct trace_array *tr, char *option)
 {
 	char *cmp;
 	int neg = 0;
@@ -5283,8 +5308,8 @@ static int __tracing_resize_ring_buffer(struct trace_array *tr,
 	return ret;
 }
 
-static ssize_t tracing_resize_ring_buffer(struct trace_array *tr,
-					  unsigned long size, int cpu_id)
+ssize_t tracing_resize_ring_buffer(struct trace_array *tr,
+				  unsigned long size, int cpu_id)
 {
 	int ret = size;
 
@@ -5363,7 +5388,7 @@ static void add_tracer_options(struct trace_array *tr, struct tracer *t)
 	create_trace_option_files(tr, t);
 }
 
-static int tracing_set_tracer(struct trace_array *tr, const char *buf)
+int tracing_set_tracer(struct trace_array *tr, const char *buf)
 {
 	struct tracer *t;
 #ifdef CONFIG_TRACER_MAX_TRACE
@@ -7797,7 +7822,7 @@ static void update_tracer_options(struct trace_array *tr)
 	mutex_unlock(&trace_types_lock);
 }
 
-static int instance_mkdir(const char *name)
+struct trace_array *trace_array_create(const char *name)
 {
 	struct trace_array *tr;
 	int ret;
@@ -7861,7 +7886,7 @@ static int instance_mkdir(const char *name)
 	mutex_unlock(&trace_types_lock);
 	mutex_unlock(&event_mutex);
 
-	return 0;
+	return tr;
 
  out_free_tr:
 	free_trace_buffers(tr);
@@ -7873,33 +7898,21 @@ static int instance_mkdir(const char *name)
 	mutex_unlock(&trace_types_lock);
 	mutex_unlock(&event_mutex);
 
-	return ret;
+	return ERR_PTR(ret);
+}
+EXPORT_SYMBOL_GPL(trace_array_create);
 
+static int instance_mkdir(const char *name)
+{
+	return PTR_ERR_OR_ZERO(trace_array_create(name));
 }
 
-static int instance_rmdir(const char *name)
+static int __remove_instance(struct trace_array *tr)
 {
-	struct trace_array *tr;
-	int found = 0;
-	int ret;
 	int i;
 
-	mutex_lock(&event_mutex);
-	mutex_lock(&trace_types_lock);
-
-	ret = -ENODEV;
-	list_for_each_entry(tr, &ftrace_trace_arrays, list) {
-		if (tr->name && strcmp(tr->name, name) == 0) {
-			found = 1;
-			break;
-		}
-	}
-	if (!found)
-		goto out_unlock;
-
-	ret = -EBUSY;
 	if (tr->ref || (tr->current_trace && tr->current_trace->ref))
-		goto out_unlock;
+		return -EBUSY;
 
 	list_del(&tr->list);
 
@@ -7925,10 +7938,46 @@ static int instance_rmdir(const char *name)
 	free_cpumask_var(tr->tracing_cpumask);
 	kfree(tr->name);
 	kfree(tr);
+	tr = NULL;
 
-	ret = 0;
+	return 0;
+}
 
- out_unlock:
+int trace_array_destroy(struct trace_array *tr)
+{
+	int ret;
+
+	if (!tr)
+		return -EINVAL;
+
+	mutex_lock(&event_mutex);
+	mutex_lock(&trace_types_lock);
+
+	ret = __remove_instance(tr);
+
+	mutex_unlock(&trace_types_lock);
+	mutex_unlock(&event_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(trace_array_destroy);
+
+static int instance_rmdir(const char *name)
+{
+	struct trace_array *tr;
+	int ret;
+
+	mutex_lock(&event_mutex);
+	mutex_lock(&trace_types_lock);
+
+	ret = -ENODEV;
+	list_for_each_entry(tr, &ftrace_trace_arrays, list) {
+		if (tr->name && strcmp(tr->name, name) == 0) {
+			ret = __remove_instance(tr);
+			break;
+		}
+	}
+
 	mutex_unlock(&trace_types_lock);
 	mutex_unlock(&event_mutex);
 
