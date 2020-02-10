@@ -22,8 +22,9 @@
 #define INCFS_DATA_FILE_BLOCK_SIZE 4096
 #define INCFS_HEADER_VER 1
 
-// TODO: This value is assumed in incfs_copy_signature_info_from_user to be the
-// actual signature length. Set back to 64 when fixed.
+/* TODO: This value is assumed in incfs_copy_signature_info_from_user to be the
+ * actual signature length. Set back to 64 when fixed.
+ */
 #define INCFS_MAX_HASH_SIZE 32
 #define INCFS_MAX_FILE_ATTR_SIZE 512
 
@@ -106,10 +107,13 @@ struct incfs_new_data_block {
 	/* Values from enum incfs_block_flags */
 	__u8 flags;
 
+	/* Reserved - must be 0 */
 	__u16 reserved1;
 
+	/* Reserved - must be 0 */
 	__u32 reserved2;
 
+	/* Reserved - must be 0 */
 	__aligned_u64 reserved3;
 };
 
@@ -139,6 +143,7 @@ struct incfs_file_signature_info {
 	/* Size of additional data. */
 	__u32 additional_data_size;
 
+	/* Reserved - must be 0 */
 	__u32 reserved1;
 
 	/*
@@ -152,6 +157,7 @@ struct incfs_file_signature_info {
 	/* Size of pkcs7 signature DER blob */
 	__u32 signature_size;
 
+	/* Reserved - must be 0 */
 	__u32 reserved2;
 
 	/* Value from incfs_hash_tree_algorithm */
@@ -175,8 +181,10 @@ struct incfs_new_file_args {
 	 */
 	__u16 mode;
 
+	/* Reserved - must be 0 */
 	__u16 reserved1;
 
+	/* Reserved - must be 0 */
 	__u32 reserved2;
 
 	/*
@@ -209,13 +217,16 @@ struct incfs_new_file_args {
 	 */
 	__u32 file_attr_len;
 
+	/* Reserved - must be 0 */
 	__u32 reserved4;
 
 	/* struct incfs_file_signature_info *signature_info; */
 	__aligned_u64 signature_info;
 
+	/* Reserved - must be 0 */
 	__aligned_u64 reserved5;
 
+	/* Reserved - must be 0 */
 	__aligned_u64 reserved6;
 };
 

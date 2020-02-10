@@ -350,7 +350,6 @@ static int inode_set(struct inode *inode, void *opaque)
 		struct dentry *backing_dentry = search->backing_dentry;
 		struct inode *backing_inode = d_inode(backing_dentry);
 
-		inode_init_owner(inode, NULL, backing_inode->i_mode);
 		fsstack_copy_attr_all(inode, backing_inode);
 		if (S_ISREG(inode->i_mode)) {
 			u64 size = read_size_attr(backing_dentry);
@@ -382,6 +381,7 @@ static int inode_set(struct inode *inode, void *opaque)
 			pr_warn("incfs: ino conflict with backing FS %ld\n",
 				backing_inode->i_ino);
 		}
+
 		return 0;
 	} else if (search->ino == INCFS_PENDING_READS_INODE) {
 		/* It's an inode for .pending_reads pseudo file. */
@@ -868,9 +868,10 @@ static struct signature_info *incfs_copy_signature_info_from_user(
 			goto err;
 		}
 
-		// TODO this sets the root_hash length to MAX_HASH_SIZE not
-		// the actual size. Fix, then set INCFS_MAX_HASH_SIZE back
-		// to 64
+		/* TODO this sets the root_hash length to MAX_HASH_SIZE not
+		 * the actual size. Fix, then set INCFS_MAX_HASH_SIZE back
+		 * to 64
+		 */
 		result->root_hash = range(p, INCFS_MAX_HASH_SIZE);
 		if (copy_from_user(p, u64_to_user_ptr(usr_si.root_hash),
 				result->root_hash.len) > 0) {
@@ -1005,8 +1006,9 @@ static int init_new_file(struct mount_info *mi, struct dentry *dentry,
 				goto out;
 			}
 
-			// TODO This code seems wrong when len is zero - we
-			// should error out??
+			/* TODO This code seems wrong when len is zero - we
+			 * should error out??
+			 */
 			if (si->signature.len > 0)
 				error = incfs_validate_pkcs7_signature(
 						si->signature,
@@ -1114,8 +1116,6 @@ static int dir_relative_path_resolve(
 		LOOKUP_FOLLOW | LOOKUP_DIRECTORY, result_path, NULL);
 
 out:
-	// TODO sys_close should be replaced with ksys_close on later kernel
-	// Add to compat or some such?
 	sys_close(dir_fd);
 	if (error)
 		pr_debug("incfs: %s %d\n", __func__, error);
@@ -1138,6 +1138,27 @@ static int validate_name(char *file_name)
 			return -EINVAL;
 
 	return 0;
+}
+
+static int chmod(struct dentry *dentry, umode_t mode)
+{
+	struct inode *inode = dentry->d_inode;
+	struct inode *delegated_inode = NULL;
+	struct iattr newattrs;
+	int error;
+
+retry_deleg:
+	inode_lock(inode);
+	newattrs.ia_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
+	newattrs.ia_valid = ATTR_MODE | ATTR_CTIME;
+	error = notify_change(dentry, &newattrs, &delegated_inode);
+	inode_unlock(inode);
+	if (delegated_inode) {
+		error = break_deleg_wait(&delegated_inode);
+		if (!error)
+			goto retry_deleg;
+	}
+	return error;
 }
 
 static long ioctl_create_file(struct mount_info *mi,
@@ -1240,8 +1261,8 @@ static long ioctl_create_file(struct mount_info *mi,
 	/* Creating a file in the .index dir. */
 	index_dir_inode = d_inode(mi->mi_index_dir);
 	inode_lock_nested(index_dir_inode, I_MUTEX_PARENT);
-	error = vfs_create(index_dir_inode, index_file_dentry,
-			args.mode, true);
+	error = vfs_create(index_dir_inode, index_file_dentry, args.mode | 0222,
+			   true);
 	inode_unlock(index_dir_inode);
 
 	if (error)
@@ -1249,6 +1270,12 @@ static long ioctl_create_file(struct mount_info *mi,
 	if (!d_really_is_positive(index_file_dentry)) {
 		error = -EINVAL;
 		goto out;
+	}
+
+	error = chmod(index_file_dentry, args.mode | 0222);
+	if (error) {
+		pr_debug("incfs: chmod err: %d\n", error);
+		goto delete_index_file;
 	}
 
 	/* Save the file's ID as an xattr for easy fetching in future. */
@@ -1457,6 +1484,7 @@ static struct dentry *dir_lookup(struct inode *dir_inode, struct dentry *dentry,
 		err = IS_ERR(backing_dentry)
 			? PTR_ERR(backing_dentry)
 			: -EFAULT;
+		backing_dentry = NULL;
 		goto out;
 	} else {
 		struct inode *inode = NULL;
@@ -1540,7 +1568,7 @@ static int dir_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 	}
 
 	inode_lock_nested(dir_node->n_backing_inode, I_MUTEX_PARENT);
-	err = vfs_mkdir(dir_node->n_backing_inode, backing_dentry, mode);
+	err = vfs_mkdir(dir_node->n_backing_inode, backing_dentry, mode | 0222);
 	inode_unlock(dir_node->n_backing_inode);
 	if (!err) {
 		struct inode *inode = NULL;
