@@ -9,3 +9,11 @@ config DVB_UNIPHIER
 	  Driver for UniPhier frontend for MPEG2-TS input/output,
 	  demux and descramble.
 	  Say Y when you want to support this frontend.
+
+config DVB_UNIPHIER_LD11
+	bool "Support UniPhier LD11/LD20 HSC Device Driver"
+	depends on DVB_UNIPHIER
+	help
+	  Driver for the HSC (High speed Stream Controller) for
+	  UniPhier LD11/LD20.
+	  Say Y when you want to support this hardware.
