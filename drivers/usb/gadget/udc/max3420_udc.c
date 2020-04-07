@@ -854,6 +854,8 @@ static int max3420_thread(void *dev_id)
 
 	while (!kthread_should_stop()) {
 		if (!loop_again) {
+			ktime_t kt = ns_to_ktime(1000 * 1000 * 250); /* 250ms */
+
 			set_current_state(TASK_INTERRUPTIBLE);
 
 			spin_lock_irqsave(&udc->lock, flags);
@@ -863,9 +865,7 @@ static int max3420_thread(void *dev_id)
 			}
 			spin_unlock_irqrestore(&udc->lock, flags);
 
-			schedule();
-
-			__set_current_state(TASK_RUNNING);
+			schedule_hrtimeout(&kt, HRTIMER_MODE_REL);
 		}
 		loop_again = 0;
 
