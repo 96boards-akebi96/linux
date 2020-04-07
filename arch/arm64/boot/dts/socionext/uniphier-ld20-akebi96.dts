@@ -74,7 +74,11 @@
 	status = "okay";
 };
 
-&serial1 {
+&serial2 {
+	status = "okay";
+};
+
+&serial3 {
 	status = "okay";
 };
 
