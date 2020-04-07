@@ -438,6 +438,9 @@ static void __max3421_start(struct max3420_udc *udc)
 {
 	u8 val;
 
+	/* Need some delay if bus-powered */
+	msleep(250);
+
 	/* configure SPI */
 	spi_wr8(udc, MAX3420_REG_PINCTL, bFDUPSPI);
 
