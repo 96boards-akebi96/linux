@@ -4,6 +4,7 @@ uniphier-dvb-$(CONFIG_DVB_UNIPHIER_LD11) += hsc-ld11.o
 
 obj-$(CONFIG_DVB_UNIPHIER) += uniphier-dvb.o
 
+ccflags-y += -I$(srctree)/drivers/media/dvb-core/
 ccflags-y += -I$(srctree)/drivers/media/dvb-frontends/
 ccflags-y += -I$(srctree)/drivers/media/tuners/
 
