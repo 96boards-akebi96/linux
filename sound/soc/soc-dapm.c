@@ -792,7 +792,13 @@ static void dapm_set_mixer_path_status(struct snd_soc_dapm_path *p, int i,
 			val = max - val;
 		p->connect = !!val;
 	} else {
-		p->connect = 0;
+		/* since a virtual mixer has no backing registers to
+		 * decide which path to connect, it will try to match
+		 * with initial state.  This is to ensure
+		 * that the default mixer choice will be
+		 * correctly powered up during initialization.
+		 */
+		p->connect = invert;
 	}
 }
 
@@ -1591,7 +1597,7 @@ static void dapm_seq_run(struct snd_soc_card *card,
 		/* Do we need to apply any queued changes? */
 		if (sort[w->id] != cur_sort || w->reg != cur_reg ||
 		    w->dapm != cur_dapm || w->subseq != cur_subseq) {
-			if (!list_empty(&pending))
+			if (cur_dapm && !list_empty(&pending))
 				dapm_seq_run_coalesced(card, &pending);
 
 			if (cur_dapm && cur_dapm->seq_notifier) {
@@ -1654,7 +1660,7 @@ static void dapm_seq_run(struct snd_soc_card *card,
 				"ASoC: Failed to apply widget power: %d\n", ret);
 	}
 
-	if (!list_empty(&pending))
+	if (cur_dapm && !list_empty(&pending))
 		dapm_seq_run_coalesced(card, &pending);
 
 	if (cur_dapm && cur_dapm->seq_notifier) {
@@ -1899,6 +1905,7 @@ static int dapm_power_widgets(struct snd_soc_card *card, int event)
 	lockdep_assert_held(&card->dapm_mutex);
 
 	trace_snd_soc_dapm_start(card);
+	mutex_lock(&card->dapm_power_mutex);
 
 	list_for_each_entry(d, &card->dapm_list, list) {
 		if (dapm_idle_bias_off(d))
@@ -2018,6 +2025,7 @@ static int dapm_power_widgets(struct snd_soc_card *card, int event)
 	pop_dbg(card->dev, card->pop_time,
 		"DAPM sequencing finished, waiting %dms\n", card->pop_time);
 	pop_wait(card->pop_time);
+	mutex_unlock(&card->dapm_power_mutex);
 
 	trace_snd_soc_dapm_done(card);
 
