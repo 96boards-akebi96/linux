@@ -6,7 +6,7 @@
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014 Intel Mobile Communications GmbH
  * Copyright 2015-2017	Intel Deutschland GmbH
- * Copyright (C) 2018 Intel Corporation
+ * Copyright (C) 2018-2019 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2078,6 +2078,8 @@ struct cfg80211_bss_ies {
  * @signal: signal strength value (type depends on the wiphy's signal_type)
  * @chains: bitmask for filled values in @chain_signal.
  * @chain_signal: per-chain signal strength of last received BSS in dBm.
+ * @bssid_index: index in the multiple BSS set
+ * @max_bssid_indicator: max number of members in the BSS set
  * @priv: private area for driver use, has at least wiphy->bss_priv_size bytes
  */
 struct cfg80211_bss {
@@ -2089,6 +2091,8 @@ struct cfg80211_bss {
 	const struct cfg80211_bss_ies __rcu *proberesp_ies;
 
 	struct cfg80211_bss *hidden_beacon_bss;
+	struct cfg80211_bss *transmitted_bss;
+	struct list_head nontrans_list;
 
 	s32 signal;
 
@@ -2098,6 +2102,9 @@ struct cfg80211_bss {
 	u8 bssid[ETH_ALEN];
 	u8 chains;
 	s8 chain_signal[IEEE80211_MAX_CHAINS];
+
+	u8 bssid_index;
+	u8 max_bssid_indicator;
 
 	u8 priv[0] __aligned(sizeof(void *));
 };
@@ -2899,6 +2906,32 @@ struct cfg80211_external_auth_params {
 };
 
 /**
+ * struct cfg80211_update_owe_info - OWE Information
+ *
+ * This structure provides information needed for the drivers to offload OWE
+ * (Opportunistic Wireless Encryption) processing to the user space.
+ *
+ * Commonly used across update_owe_info request and event interfaces.
+ *
+ * @peer: MAC address of the peer device for which the OWE processing
+ *	has to be done.
+ * @status: status code, %WLAN_STATUS_SUCCESS for successful OWE info
+ *	processing, use %WLAN_STATUS_UNSPECIFIED_FAILURE if user space
+ *	cannot give you the real status code for failures. Used only for
+ *	OWE update request command interface (user space to driver).
+ * @ie: IEs obtained from the peer or constructed by the user space. These are
+ *	the IEs of the remote peer in the event from the host driver and
+ *	the constructed IEs by the user space in the request interface.
+ * @ie_len: Length of IEs in octets.
+ */
+struct cfg80211_update_owe_info {
+	u8 peer[ETH_ALEN] __aligned(2);
+	u16 status;
+	const u8 *ie;
+	size_t ie_len;
+};
+
+/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -3233,6 +3266,10 @@ struct cfg80211_external_auth_params {
  *
  * @tx_control_port: TX a control port frame (EAPoL).  The noencrypt parameter
  *	tells the driver that the frame should not be encrypted.
+ *
+ * @update_owe_info: Provide updated OWE info to driver. Driver implementing SME
+ *	but offloading OWE processing to the user space will get the updated
+ *	DH IE through this interface.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -3540,6 +3577,8 @@ struct cfg80211_ops {
 				   const u8 *buf, size_t len,
 				   const u8 *dest, const __be16 proto,
 				   const bool noencrypt);
+	int	(*update_owe_info)(struct wiphy *wiphy, struct net_device *dev,
+				   struct cfg80211_update_owe_info *owe_info);
 };
 
 /*
@@ -4077,6 +4116,11 @@ struct wiphy_iftype_ext_capab {
  * @txq_limit: configuration of internal TX queue frame limit
  * @txq_memory_limit: configuration internal TX queue memory limit
  * @txq_quantum: configuration of internal TX queue scheduler quantum
+ *
+ * @support_mbssid: can HW support association with nontransmitted AP
+ * @support_only_he_mbssid: don't parse MBSSID elements if it is not
+ *	HE AP, in order to avoid compatibility issues.
+ *	@support_mbssid must be set for this to have any effect.
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -4214,6 +4258,9 @@ struct wiphy {
 	u32 txq_limit;
 	u32 txq_memory_limit;
 	u32 txq_quantum;
+
+	u8 support_mbssid:1,
+	   support_only_he_mbssid:1;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };
@@ -5083,6 +5130,27 @@ cfg80211_inform_bss_frame(struct wiphy *wiphy,
 	};
 
 	return cfg80211_inform_bss_frame_data(wiphy, &data, mgmt, len, gfp);
+}
+
+/**
+ * cfg80211_gen_new_bssid - generate a nontransmitted BSSID for multi-BSSID
+ * @bssid: transmitter BSSID
+ * @max_bssid: max BSSID indicator, taken from Multiple BSSID element
+ * @mbssid_index: BSSID index, taken from Multiple BSSID index element
+ * @new_bssid: calculated nontransmitted BSSID
+ */
+static inline void cfg80211_gen_new_bssid(const u8 *bssid, u8 max_bssid,
+					  u8 mbssid_index, u8 *new_bssid)
+{
+	u64 bssid_u64 = ether_addr_to_u64(bssid);
+	u64 mask = GENMASK_ULL(max_bssid - 1, 0);
+	u64 new_bssid_u64;
+
+	new_bssid_u64 = bssid_u64 & ~mask;
+
+	new_bssid_u64 |= ((bssid_u64 & mask) + mbssid_index) & mask;
+
+	u64_to_ether_addr(new_bssid_u64, new_bssid);
 }
 
 /**
@@ -6749,5 +6817,15 @@ bool cfg80211_iftype_allowed(struct wiphy *wiphy, enum nl80211_iftype iftype,
  */
 #define wiphy_WARN(wiphy, format, args...)			\
 	WARN(1, "wiphy: %s\n" format, wiphy_name(wiphy), ##args);
+
+/**
+ * cfg80211_update_owe_info_event - Notify the peer's OWE info to user space
+ * @netdev: network device
+ * @owe_info: peer's owe info
+ * @gfp: allocation flags
+ */
+void cfg80211_update_owe_info_event(struct net_device *netdev,
+				    struct cfg80211_update_owe_info *owe_info,
+				    gfp_t gfp);
 
 #endif /* __NET_CFG80211_H */

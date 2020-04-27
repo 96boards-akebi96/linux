@@ -231,6 +231,7 @@
   dma_fence_signal_locked
   __dma_flush_area
   __dma_inv_area
+  dmam_alloc_coherent
   dma_release_from_dev_coherent
   dma_request_slave_channel
   do_exit
@@ -275,7 +276,8 @@
   fwnode_property_read_u32_array
   gcd
   generic_handle_irq
-  genlmsg_put
+  genl_register_family
+  genl_unregister_family
   gen_pool_add_virt
   gen_pool_alloc
   gen_pool_create
@@ -943,6 +945,8 @@
   trace_event_reg
   trace_handle_return
   trace_print_flags_seq
+  trace_print_hex_seq
+  trace_print_symbols_seq
   trace_raw_output_prep
   trace_seq_printf
   try_module_get
@@ -1227,6 +1231,7 @@
   bio_crypt_alloc_ctx
   blk_crypto_evict_key
   blk_crypto_init_key
+  blk_crypto_start_using_mode
   dm_get_device
   dm_put_device
   dm_read_arg_group
@@ -1340,12 +1345,6 @@
 # required by governor_bw_hwmon.ko
   argv_free
   argv_split
-  __tracepoint_bw_hwmon_meas
-  __tracepoint_bw_hwmon_update
-
-# required by governor_memlat.ko
-  __tracepoint_memlat_dev_meas
-  __tracepoint_memlat_dev_update
 
 # required by gpi.ko
   dma_async_device_register
@@ -1520,7 +1519,6 @@
   sysfs_create_bin_file
   sysfs_remove_bin_file
   sysfs_remove_files
-  trace_print_symbols_seq
   unmapped_area_topdown
   unregister_shrinker
   vm_insert_page
@@ -1830,9 +1828,6 @@
   uart_update_timeout
   uart_write_wakeup
 
-# required by msm_icnss.ko
-  dmam_alloc_coherent
-
 # required by msm_ipc_logging.ko
   _raw_read_lock_irq
   _raw_read_unlock_irq
@@ -1845,7 +1840,7 @@
   __tracepoint_clock_set_rate
 
 # required by msm_minidump.ko
-  linux_banner
+  linux_banner_ptr
 
 # required by msm_npu.ko
   kmem_cache_create_usercopy
@@ -2120,8 +2115,7 @@
   csum_tcpudp_nofold
   __dev_get_by_index
   dev_queue_xmit
-  genl_register_family
-  genl_unregister_family
+  genlmsg_put
   get_current_napi_context
   gro_cells_destroy
   gro_cells_init
@@ -2141,7 +2135,6 @@
   skb_append_pagefrags
   skb_checksum
   synchronize_rcu
-  trace_print_hex_seq
   unregister_netdevice_many
 
 # required by rndis.ko
@@ -2420,20 +2413,43 @@
   regulator_list_voltage_table
   regulator_map_voltage_ascend
 
-# required by ufs_qcom.ko
-  ufshcd_dme_get_attr
-  ufshcd_dme_set_attr
-  ufshcd_get_local_unipro_ver
-  ufshcd_hold
-  ufshcd_pltfrm_init
-  ufshcd_pltfrm_resume
-  ufshcd_pltfrm_runtime_idle
-  ufshcd_pltfrm_runtime_resume
-  ufshcd_pltfrm_runtime_suspend
-  ufshcd_pltfrm_shutdown
-  ufshcd_pltfrm_suspend
-  ufshcd_release
-  ufshcd_remove
+# required by ufshcd-core.ko
+  async_schedule
+  bio_crypt_should_process
+  blk_queue_max_segment_size
+  blk_queue_rq_timeout
+  blk_queue_update_dma_pad
+  dev_pm_opp_remove
+  down_read_trylock
+  down_write_trylock
+  keyslot_manager_create
+  keyslot_manager_destroy
+  keyslot_manager_private
+  keyslot_manager_reprogram_all_keys
+  __ll_sc_atomic64_fetch_andnot_release
+  __ll_sc_atomic64_fetch_or_acquire
+  __scsi_add_device
+  scsi_add_host_with_dma
+  scsi_block_requests
+  scsi_change_queue_depth
+  scsi_device_get
+  scsi_device_put
+  scsi_dma_map
+  scsi_dma_unmap
+  __scsi_execute
+  scsi_host_alloc
+  scsi_host_put
+  scsi_print_command
+  scsi_print_sense_hdr
+  scsi_remove_device
+  scsi_remove_host
+  scsi_report_bus_reset
+  scsi_scan_host
+  scsi_set_cmd_timeout_override
+  scsi_unblock_requests
+  sdev_prefix_printk
+  trace_output_call
+  utf16s_to_utf8s
 
 # required by wlan.ko
   bitmap_print_to_pagebuf
@@ -2469,7 +2485,6 @@
   cfg80211_unlink_bss
   cfg80211_update_owe_info_event
   cfg80211_vendor_cmd_reply
-  cld80211_get_genl_family
   complete_and_exit
   cpufreq_quick_get_max
   __cpuhp_remove_state
@@ -2481,7 +2496,6 @@
   crypto_alloc_skcipher
   crypto_shash_final
   crypto_shash_update
-  deregister_cld_cmd_cb
   dev_alloc_name
   dump_stack
   hex_to_bin
@@ -2510,7 +2524,6 @@
   pm_system_wakeup
   proc_create_data
   proc_mkdir
-  register_cld_cmd_cb
   register_netevent_notifier
   register_sysctl_table
   regulatory_set_wiphy_regd
