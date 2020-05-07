@@ -753,6 +753,7 @@
   __regmap_init
   regmap_multi_reg_write
   regmap_raw_read
+  regmap_raw_write
   regmap_read
   regmap_update_bits_base
   regmap_write
@@ -761,6 +762,7 @@
   regulator_disable
   regulator_enable
   regulator_get
+  regulator_get_voltage
   regulator_is_enabled
   regulator_put
   regulator_set_load
@@ -916,6 +918,7 @@
   sysfs_remove_group
   sysfs_remove_groups
   sysfs_streq
+  system_freezable_wq
   system_freezing_cnt
   system_highpri_wq
   system_long_wq
@@ -1275,7 +1278,6 @@
   pinctrl_pm_select_default_state
   pinctrl_pm_select_sleep_state
   strcat
-  system_freezable_wq
   usb_add_gadget_udc
   usb_del_gadget_udc
   usb_ep_set_maxpacket_limit
@@ -1383,8 +1385,10 @@
   dma_buf_export
   dma_get_device_base
   dma_get_size
+  __ll_sc_atomic64_sub_return
   mm_event_count
   __next_zones_zonelist
+  ptr_to_hashval
   sched_setattr
   split_page
   vm_map_ram
@@ -1427,6 +1431,7 @@
   snd_soc_dai_set_pll
   snd_soc_dai_set_sysclk
   snd_soc_dai_set_tdm_slot
+  snd_soc_get_pcm_runtime
   snd_soc_of_get_dai_link_codecs
   snd_soc_of_parse_audio_routing
   snd_soc_of_parse_card_name
@@ -1509,6 +1514,7 @@
   __ll_sc_atomic_or
   mmap_min_addr
   mmput
+  mm_trace_rss_stat
   of_devfreq_cooling_register
   plist_del
   rb_last
@@ -2051,7 +2057,6 @@
 
 # required by qpnp-smb5-charger.ko
   iio_channel_release
-  regulator_get_voltage
 
 # required by qpnp_pdphy.ko
   device_get_named_child_node
@@ -2358,7 +2363,6 @@
 
 # required by snd-soc-wm-adsp.ko
   regmap_async_complete
-  regmap_raw_write
   regmap_raw_write_async
   snd_compr_stop_error
   snd_soc_component_disable_pin
