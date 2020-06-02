@@ -67,6 +67,7 @@ static const struct uniphier_reset_data uniphier_pro4_sys_reset_data[] = {
 	UNIPHIER_RESETX(29, 0x2004, 18),	/* SATA1 */
 	UNIPHIER_RESETX(30, 0x2000, 19),	/* SATA-PHY */
 	UNIPHIER_RESETX(40, 0x2000, 13),	/* AIO */
+	UNIPHIER_RESETX(48, 0x2000, 15),	/* GPU */
 	UNIPHIER_RESET_END,
 };
 
@@ -78,6 +79,9 @@ static const struct uniphier_reset_data uniphier_pro5_sys_reset_data[] = {
 	UNIPHIER_RESETX(15, 0x2004, 17),	/* USB31 */
 	UNIPHIER_RESETX(24, 0x2008, 2),		/* PCIe */
 	UNIPHIER_RESETX(40, 0x2000, 13),	/* AIO */
+	UNIPHIER_RESETX(48, 0x2050, 0),		/* GPU0 */
+	UNIPHIER_RESETX(49, 0x2054, 0),		/* GPU1 */
+	UNIPHIER_RESETX(50, 0x2058, 0),		/* GPU2 */
 	UNIPHIER_RESET_END,
 };
 
@@ -95,6 +99,7 @@ static const struct uniphier_reset_data uniphier_pxs2_sys_reset_data[] = {
 	UNIPHIER_RESETX(28, 0x2014, 12),	/* SATA */
 	UNIPHIER_RESET(30, 0x2014, 8),		/* SATA-PHY (active high) */
 	UNIPHIER_RESETX(40, 0x2000, 13),	/* AIO */
+	UNIPHIER_RESETX(48, 0x2050, 0),		/* GPU */
 	UNIPHIER_RESET_END,
 };
 
@@ -107,6 +112,7 @@ static const struct uniphier_reset_data uniphier_ld11_sys_reset_data[] = {
 	UNIPHIER_RESETX(40, 0x2008, 0),		/* AIO */
 	UNIPHIER_RESETX(41, 0x2008, 1),		/* EVEA */
 	UNIPHIER_RESETX(42, 0x2010, 2),		/* EXIV */
+	UNIPHIER_RESETX(48, 0x2014, 8),		/* GPU */
 	UNIPHIER_RESET_END,
 };
 
@@ -125,6 +131,7 @@ static const struct uniphier_reset_data uniphier_ld20_sys_reset_data[] = {
 	UNIPHIER_RESETX(40, 0x2008, 0),		/* AIO */
 	UNIPHIER_RESETX(41, 0x2008, 1),		/* EVEA */
 	UNIPHIER_RESETX(42, 0x2010, 2),		/* EXIV */
+	UNIPHIER_RESETX(48, 0x2014, 8),		/* GPU */
 	UNIPHIER_RESET_END,
 };
 
@@ -145,6 +152,8 @@ static const struct uniphier_reset_data uniphier_pxs3_sys_reset_data[] = {
 	UNIPHIER_RESETX(28, 0x200c, 7),		/* SATA0 */
 	UNIPHIER_RESETX(29, 0x200c, 8),		/* SATA1 */
 	UNIPHIER_RESETX(30, 0x200c, 21),	/* SATA-PHY */
+	UNIPHIER_RESETX(48, 0x2014, 8),		/* GPU0 */
+	UNIPHIER_RESETX(49, 0x2014, 7),		/* GPU1 */
 	UNIPHIER_RESET_END,
 };
 
