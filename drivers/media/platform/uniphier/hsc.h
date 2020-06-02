@@ -165,7 +165,7 @@ enum {
 
 #define HSC_STREAM_IF_NUM    2
 
-#define HSC_DMAIF_TS_BUFSIZE    (192 * 1024 * 5)
+#define HSC_DMAIF_TS_BUFSIZE    (192 * 1024 * 20)
 
 struct hsc_ucode_buf {
 	void *buf_code;
