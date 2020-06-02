@@ -240,6 +240,8 @@ static void hsc_dmaif_feed_worker(struct work_struct *work)
 	struct hsc_tsif *tsif = dmaif->tsif;
 	struct hsc_dma_buf *buf = &dmaif->buf_out;
 	struct device *dev = &dmaif->chip->pdev->dev;
+	const struct hsc_spec_dma *spec = dmaif->dma_out.spec;
+	struct hsc_chip *chip = dmaif->dma_out.chip;
 	dma_addr_t dmapos;
 	u8 *pkt;
 	u64 cnt, i;
@@ -249,10 +251,7 @@ static void hsc_dmaif_feed_worker(struct work_struct *work)
 		return;
 
 retry:
-	spin_lock(&dmaif->lock);
-	hsc_dma_out_sync(&dmaif->dma_out);
-	spin_unlock(&dmaif->lock);
-
+	buf->wr_offs = hsc_dma_rb_get_wp(chip, spec->rb_ch) - buf->phys;
 	dmapos = buf->phys + buf->rd_offs;
 	cnt = hsc_rb_cnt_to_end(buf);
 	cnt = DIV_ROUND_DOWN_ULL(cnt, SZ_M2TS_PKT) * SZ_M2TS_PKT;
@@ -264,25 +263,28 @@ retry:
 	}
 	dma_sync_single_for_device(dev, dmapos, cnt, DMA_FROM_DEVICE);
 
-	spin_lock(&dmaif->lock);
-
 	buf->rd_offs += cnt;
 	if (buf->rd_offs >= buf->size)
 		buf->rd_offs -= buf->size;
+	hsc_dma_rb_set_rp(chip, spec->rb_ch, buf->rd_offs + buf->phys);
+
+	buf->wr_offs = hsc_dma_rb_get_wp(chip, spec->rb_ch) - buf->phys;
+	if (hsc_rb_cnt(buf) >= buf->size_chk / 4) {
+		wrap = 1;
+		goto retry;
+	}
 
 	buf->chk_offs = buf->wr_offs + buf->size_chk;
 	if (buf->chk_offs >= buf->size)
 		buf->chk_offs -= buf->size;
 
-	if (!wrap && hsc_rb_cnt(buf) >= buf->size_chk / 2) {
-		wrap = 1;
-		spin_unlock(&dmaif->lock);
-		goto retry;
-	}
-
 	hsc_dma_out_sync(&dmaif->dma_out);
 
-	spin_unlock(&dmaif->lock);
+	if ((buf->rd_offs == (hsc_dma_rb_get_wp(chip, spec->rb_ch) - buf->phys))
+	     && (buf->rd_offs == buf->wr_offs))
+		pr_warn("DMA is stopped: rd %lld wr %lld hw wr %lld\n",
+			buf->rd_offs, buf->wr_offs,
+			(hsc_dma_rb_get_wp(chip, spec->rb_ch) - buf->phys));
 }
 
 static irqreturn_t hsc_dmaif_irq(int irq, void *p)
@@ -304,10 +306,6 @@ static irqreturn_t hsc_dmaif_irq(int irq, void *p)
 			continue;
 
 		hsc_dma_out_clear_intr(&dmaif->dma_out, 0xffff);
-
-		spin_lock(&dmaif->lock);
-		hsc_dma_out_sync(&dmaif->dma_out);
-		spin_unlock(&dmaif->lock);
 
 		schedule_work(&dmaif->feed_work);
 
