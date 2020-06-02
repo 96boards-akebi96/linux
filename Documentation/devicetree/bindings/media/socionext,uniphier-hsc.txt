@@ -1,0 +1,38 @@
+Socionext UniPhier HSC (High-speed Stream Controller)
+
+The Socionext UniPhier HSC subsystem consists of MPEG2-TS input/output and
+demultiplexer cores in the same register space.
+
+This interface supports TS serial signals (clock, valid, sync, data) from
+external demodulators.
+
+Required properties:
+- compatible      : should be one of the following:
+		    "socionext,uniphier-ld11-hsc"
+		    "socionext,uniphier-ld20-hsc"
+- reg             : offset and length of the register set for the device.
+- interrupts      : should contain DMA and TSI error interrupt.
+- pinctrl-names   : should be "default".
+- pinctrl-0       : defined TS serial signal pins for external demodulators.
+- clock-names     : should include the following entries:
+                    "hsc", "stdmac"
+- clocks          : a list of phandle, should contain an entry for each
+                    entry in clock-names.
+- reset-names     : should include the following entries:
+                    "hsc", "stdmac"
+- resets          : a list of phandle, should contain an entry for each
+                    entry in reset-names.
+
+Example:
+	hsc {
+		compatible = "socionext,uniphier-ld20-hsc";
+		reg = <0x5c000000 0x100000>;
+		interrupts = <0 100 4>, <0 101 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_hscin2_s>,
+			    <&pinctrl_hscin3_s>;
+		clock-names = "stdmac", "hsc";
+		clocks = <&sys_clk 8>, <&sys_clk 9>;
+		reset-names = "stdmac", "hsc";
+		resets = <&sys_rst 8>, <&sys_rst 9>;
+	};
