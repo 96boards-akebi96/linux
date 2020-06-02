@@ -157,8 +157,7 @@
 		reg = <0>;
 		spi-max-frequency = <12500000>;
 		interrupt-parent = <&gpio>;
-		interrupt-names = "udc";
-		interrupts = <0 2>;
+		interrupts = <0 2>, <10 3>;
 	};
 };
 
