@@ -204,8 +204,11 @@ void tty_port_unregister_device(struct tty_port *port,
 	int ret;
 
 	ret = serdev_tty_port_unregister(port);
-	if (ret == 0)
+	if (ret == 0) {
+		/* restore client ops to default */
+		port->client_ops = &tty_port_default_client_ops;
 		return;
+	}
 
 	tty_unregister_device(driver, index);
 }
