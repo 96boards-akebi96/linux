@@ -178,6 +178,10 @@
 	status = "okay";
 };
 
+&i2c4 {
+	status = "okay";
+};
+
 &spi3 {
 	status = "okay";
 	#address-cells = <1>;
@@ -211,4 +215,17 @@
 
 &pinctrl_uart3 {
 	groups = "uart3", "uart3_ctsrts";
+ };
+
+&soc {
+	frontend {
+		compatible = "socionext,uniphier-ld20-mn884434-helene";
+		clock-names = "demod-mclk";
+		clocks = <&demod_clk>;
+		demux = <&hsc>;
+		reset-demod-gpios = <&gpio UNIPHIER_GPIO_PORT(24, 0) GPIO_ACTIVE_LOW>;
+		demod-i2c-bus = <&i2c0>;
+		reset-tuner-gpios = <&gpio UNIPHIER_GPIO_PORT(0, 4) GPIO_ACTIVE_LOW>;
+		tuner-i2c-bus = <&i2c4>;
+	};
 };
