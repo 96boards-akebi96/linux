@@ -773,6 +773,7 @@ static const struct of_device_id mn88443x_of_match[] = {
 	{ .compatible = "socionext,mn884433",   .data = &mn88443x_spec_pri, },
 	{ .compatible = "socionext,mn884434-0", .data = &mn88443x_spec_pri, },
 	{ .compatible = "socionext,mn884434-1", .data = &mn88443x_spec_sec, },
+	{ .compatible = "socionext,sc1501a",    .data = &mn88443x_spec_pri, },
 	{}
 };
 MODULE_DEVICE_TABLE(of, mn88443x_of_match);
@@ -781,6 +782,7 @@ static const struct i2c_device_id mn88443x_i2c_id[] = {
 	{ "mn884433",   (kernel_ulong_t)&mn88443x_spec_pri },
 	{ "mn884434-0", (kernel_ulong_t)&mn88443x_spec_pri },
 	{ "mn884434-1", (kernel_ulong_t)&mn88443x_spec_sec },
+	{ "sc1501a",    (kernel_ulong_t)&mn88443x_spec_pri },
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, mn88443x_i2c_id);
